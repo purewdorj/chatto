@@ -3,6 +3,10 @@
 
 Message-level actions that wrap below the editor in narrow composer containers.
 Formatting commands live in `ComposerFormattingToolbar`.
+
+Buttons that act on the draft cancel both `pointerdown` and `mousedown`, so the
+editor keeps focus. iOS WebKit moves focus with the mouse events of a tap even
+when `pointerdown` is cancelled; the keyboard then closes and opens again.
 -->
 <script lang="ts">
   import { CompactActionButton } from '$lib/ui';
@@ -81,6 +85,7 @@ Formatting commands live in `ComposerFormattingToolbar`.
         label={`${m('composer.thread_label')}: ${m('composer.post_as_thread')}`}
         type="button"
         onpointerdown={(event) => event.preventDefault()}
+        onmousedown={(event) => event.preventDefault()}
         onclick={onToggleCreateThread}
         disabled={inputDisabled || createThreadRequired}
         aria-pressed={createThread}
@@ -106,6 +111,7 @@ Formatting commands live in `ComposerFormattingToolbar`.
         )}`}
         type="button"
         onpointerdown={(event) => event.preventDefault()}
+        onmousedown={(event) => event.preventDefault()}
         onclick={onToggleAlsoSendToChannel}
         disabled={inputDisabled}
         aria-pressed={alsoSendToChannel}
@@ -128,6 +134,7 @@ Formatting commands live in `ComposerFormattingToolbar`.
       label={`${m('composer.send_label')}: ${m('composer.send')}`}
       type="button"
       onpointerdown={(event) => event.preventDefault()}
+      onmousedown={(event) => event.preventDefault()}
       onclick={onsubmit}
       disabled={!canSubmit}
       class="@min-[560px]/composer:gap-1"

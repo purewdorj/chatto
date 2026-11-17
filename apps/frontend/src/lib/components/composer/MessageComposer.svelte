@@ -343,6 +343,7 @@
           label={m('composer.formatting_options')}
           type="button"
           onpointerdown={(event) => event.preventDefault()}
+          onmousedown={(event) => event.preventDefault()}
           onclick={() =>
             (userPreferences.composerFormattingToolbarVisible =
               !userPreferences.composerFormattingToolbarVisible)}

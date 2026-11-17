@@ -102,6 +102,7 @@ block in the DOM until it finishes.
           <button
             type="button"
             onpointerdown={(event) => event.preventDefault()}
+            onmousedown={(event) => event.preventDefault()}
             onclick={() => editorApi?.toggleFormatting(control.command)}
             disabled={inputDisabled ||
               !editorApi ||
@@ -121,6 +122,7 @@ block in the DOM until it finishes.
             <button
               type="button"
               onpointerdown={(event) => event.preventDefault()}
+              onmousedown={(event) => event.preventDefault()}
               onclick={() => editorApi?.adjustIndent('outdent')}
               disabled={inputDisabled || !editorApi || !indentState.canOutdent}
               aria-label={m('composer.format.outdent')}
@@ -135,6 +137,7 @@ block in the DOM until it finishes.
             <button
               type="button"
               onpointerdown={(event) => event.preventDefault()}
+              onmousedown={(event) => event.preventDefault()}
               onclick={() => editorApi?.adjustIndent('indent')}
               disabled={inputDisabled || !editorApi || !indentState.canIndent}
               aria-label={m('composer.format.indent')}

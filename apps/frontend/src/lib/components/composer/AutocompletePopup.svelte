@@ -145,6 +145,7 @@ never takes focus: the editor keeps focus and forwards keys to `handleKeyDown`.
                 class={['menu-item', index === selectedIndex && 'menu-item-active']}
                 onpointermove={() => (selectedIndex = index)}
                 onpointerdown={(event) => event.preventDefault()}
+                onmousedown={(event) => event.preventDefault()}
                 onclick={() => onSelect(entry, 'click')}
               >
                 {@render item({ item: entry, selected: index === selectedIndex })}
