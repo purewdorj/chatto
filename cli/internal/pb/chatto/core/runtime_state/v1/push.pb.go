@@ -22,6 +22,63 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Push service that delivers to a native mobile push device.
+type NativePushDevicePlatform int32
+
+const (
+	NativePushDevicePlatform_NATIVE_PUSH_DEVICE_PLATFORM_UNSPECIFIED NativePushDevicePlatform = 0
+	// Apple Push Notification service.
+	NativePushDevicePlatform_NATIVE_PUSH_DEVICE_PLATFORM_APNS NativePushDevicePlatform = 1
+	// Firebase Cloud Messaging.
+	NativePushDevicePlatform_NATIVE_PUSH_DEVICE_PLATFORM_FCM NativePushDevicePlatform = 2
+	// APNs VoIP (PushKit). Receives only call pushes on the topic
+	// "<app_id>.voip".
+	NativePushDevicePlatform_NATIVE_PUSH_DEVICE_PLATFORM_APNS_VOIP NativePushDevicePlatform = 3
+)
+
+// Enum value maps for NativePushDevicePlatform.
+var (
+	NativePushDevicePlatform_name = map[int32]string{
+		0: "NATIVE_PUSH_DEVICE_PLATFORM_UNSPECIFIED",
+		1: "NATIVE_PUSH_DEVICE_PLATFORM_APNS",
+		2: "NATIVE_PUSH_DEVICE_PLATFORM_FCM",
+		3: "NATIVE_PUSH_DEVICE_PLATFORM_APNS_VOIP",
+	}
+	NativePushDevicePlatform_value = map[string]int32{
+		"NATIVE_PUSH_DEVICE_PLATFORM_UNSPECIFIED": 0,
+		"NATIVE_PUSH_DEVICE_PLATFORM_APNS":        1,
+		"NATIVE_PUSH_DEVICE_PLATFORM_FCM":         2,
+		"NATIVE_PUSH_DEVICE_PLATFORM_APNS_VOIP":   3,
+	}
+)
+
+func (x NativePushDevicePlatform) Enum() *NativePushDevicePlatform {
+	p := new(NativePushDevicePlatform)
+	*p = x
+	return p
+}
+
+func (x NativePushDevicePlatform) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (NativePushDevicePlatform) Descriptor() protoreflect.EnumDescriptor {
+	return file_chatto_core_runtime_state_v1_push_proto_enumTypes[0].Descriptor()
+}
+
+func (NativePushDevicePlatform) Type() protoreflect.EnumType {
+	return &file_chatto_core_runtime_state_v1_push_proto_enumTypes[0]
+}
+
+func (x NativePushDevicePlatform) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use NativePushDevicePlatform.Descriptor instead.
+func (NativePushDevicePlatform) EnumDescriptor() ([]byte, []int) {
+	return file_chatto_core_runtime_state_v1_push_proto_rawDescGZIP(), []int{0}
+}
+
 // PushSubscription stores the Web Push subscription data for a user's browser.
 //
 // Subscriptions are stored in the RUNTIME_STATE KV bucket with key format:
@@ -132,6 +189,184 @@ func (x *PushSubscription) GetCleanupToken() string {
 	return ""
 }
 
+// NativePushDevice stores the registration of a native mobile app installation
+// for push delivery through APNs or FCM.
+//
+// Devices are stored in the RUNTIME_STATE KV bucket with key format:
+// native_push_device.{userId}.{tokenHash}
+//
+// The tokenHash is the first 16 hex characters of the SHA-256 hash of the
+// provider device token. A separate native_push_device_owner.{fullTokenHash}
+// claim makes the exact current record active for only one account.
+type NativePushDevice struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Push service that delivers to the device.
+	Platform NativePushDevicePlatform `protobuf:"varint,1,opt,name=platform,proto3,enum=chatto.core.runtime_state.v1.NativePushDevicePlatform" json:"platform,omitempty"`
+	// Provider device token: the APNs device token or the FCM registration
+	// token. Secret delivery credential; never log it.
+	Token string `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
+	// App identifier: the iOS bundle ID (APNs topic) or the Android package name.
+	AppId string `protobuf:"bytes,3,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
+	// True when the APNs or APNs VoIP token belongs to the APNs development
+	// environment.
+	ApnsSandbox bool `protobuf:"varint,4,opt,name=apns_sandbox,json=apnsSandbox,proto3" json:"apns_sandbox,omitempty"`
+	// Optional device name for device identification.
+	DeviceName string `protobuf:"bytes,5,opt,name=device_name,json=deviceName,proto3" json:"device_name,omitempty"`
+	// Time of the most recent save. Every save overwrites this value. The record
+	// expires PushSubscriptionLifetime after this time; a record without this
+	// value is expired.
+	SavedAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=saved_at,json=savedAt,proto3" json:"saved_at,omitempty"`
+	// Random per-save capability used to remove a cancelled registration without
+	// an account session.
+	CleanupToken  string `protobuf:"bytes,7,opt,name=cleanup_token,json=cleanupToken,proto3" json:"cleanup_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NativePushDevice) Reset() {
+	*x = NativePushDevice{}
+	mi := &file_chatto_core_runtime_state_v1_push_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NativePushDevice) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NativePushDevice) ProtoMessage() {}
+
+func (x *NativePushDevice) ProtoReflect() protoreflect.Message {
+	mi := &file_chatto_core_runtime_state_v1_push_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NativePushDevice.ProtoReflect.Descriptor instead.
+func (*NativePushDevice) Descriptor() ([]byte, []int) {
+	return file_chatto_core_runtime_state_v1_push_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *NativePushDevice) GetPlatform() NativePushDevicePlatform {
+	if x != nil {
+		return x.Platform
+	}
+	return NativePushDevicePlatform_NATIVE_PUSH_DEVICE_PLATFORM_UNSPECIFIED
+}
+
+func (x *NativePushDevice) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *NativePushDevice) GetAppId() string {
+	if x != nil {
+		return x.AppId
+	}
+	return ""
+}
+
+func (x *NativePushDevice) GetApnsSandbox() bool {
+	if x != nil {
+		return x.ApnsSandbox
+	}
+	return false
+}
+
+func (x *NativePushDevice) GetDeviceName() string {
+	if x != nil {
+		return x.DeviceName
+	}
+	return ""
+}
+
+func (x *NativePushDevice) GetSavedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.SavedAt
+	}
+	return nil
+}
+
+func (x *NativePushDevice) GetCleanupToken() string {
+	if x != nil {
+		return x.CleanupToken
+	}
+	return ""
+}
+
+// CallRing records that the server sent an incoming-call push to one account
+// for one call. The server uses it to send a "call_end" push that stops the
+// ring on the other devices of the account when the call ends or when the
+// account joins the call. Removal of the record claims the "call_end" push,
+// so only one replica sends it.
+//
+// Rings are stored in the RUNTIME_STATE KV bucket with key format:
+// call_ring.{callId}.{recipientUserId}
+//
+// Each record has a short per-key TTL, because a ring is useful only for a
+// short time.
+type CallRing struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Room of the call.
+	RoomId string `protobuf:"bytes,1,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
+	// Time when the server recorded the ring, immediately before the push.
+	RungAt        *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=rung_at,json=rungAt,proto3" json:"rung_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CallRing) Reset() {
+	*x = CallRing{}
+	mi := &file_chatto_core_runtime_state_v1_push_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CallRing) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CallRing) ProtoMessage() {}
+
+func (x *CallRing) ProtoReflect() protoreflect.Message {
+	mi := &file_chatto_core_runtime_state_v1_push_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CallRing.ProtoReflect.Descriptor instead.
+func (*CallRing) Descriptor() ([]byte, []int) {
+	return file_chatto_core_runtime_state_v1_push_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *CallRing) GetRoomId() string {
+	if x != nil {
+		return x.RoomId
+	}
+	return ""
+}
+
+func (x *CallRing) GetRungAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RungAt
+	}
+	return nil
+}
+
 var File_chatto_core_runtime_state_v1_push_proto protoreflect.FileDescriptor
 
 const file_chatto_core_runtime_state_v1_push_proto_rawDesc = "" +
@@ -147,7 +382,24 @@ const file_chatto_core_runtime_state_v1_push_proto_rawDesc = "" +
 	"user_agent\x18\x05 \x01(\tR\tuserAgent\x12\x1f\n" +
 	"\vclient_host\x18\x06 \x01(\tR\n" +
 	"clientHost\x12#\n" +
-	"\rcleanup_token\x18\a \x01(\tR\fcleanupTokenB\x96\x02\n" +
+	"\rcleanup_token\x18\a \x01(\tR\fcleanupToken\"\xb3\x02\n" +
+	"\x10NativePushDevice\x12R\n" +
+	"\bplatform\x18\x01 \x01(\x0e26.chatto.core.runtime_state.v1.NativePushDevicePlatformR\bplatform\x12\x14\n" +
+	"\x05token\x18\x02 \x01(\tR\x05token\x12\x15\n" +
+	"\x06app_id\x18\x03 \x01(\tR\x05appId\x12!\n" +
+	"\fapns_sandbox\x18\x04 \x01(\bR\vapnsSandbox\x12\x1f\n" +
+	"\vdevice_name\x18\x05 \x01(\tR\n" +
+	"deviceName\x125\n" +
+	"\bsaved_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\asavedAt\x12#\n" +
+	"\rcleanup_token\x18\a \x01(\tR\fcleanupToken\"X\n" +
+	"\bCallRing\x12\x17\n" +
+	"\aroom_id\x18\x01 \x01(\tR\x06roomId\x123\n" +
+	"\arung_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x06rungAt*\xbd\x01\n" +
+	"\x18NativePushDevicePlatform\x12+\n" +
+	"'NATIVE_PUSH_DEVICE_PLATFORM_UNSPECIFIED\x10\x00\x12$\n" +
+	" NATIVE_PUSH_DEVICE_PLATFORM_APNS\x10\x01\x12#\n" +
+	"\x1fNATIVE_PUSH_DEVICE_PLATFORM_FCM\x10\x02\x12)\n" +
+	"%NATIVE_PUSH_DEVICE_PLATFORM_APNS_VOIP\x10\x03B\x96\x02\n" +
 	" com.chatto.core.runtime_state.v1B\tPushProtoP\x01ZXgithub.com/chattocorp/chatto/cli/internal/pb/chatto/core/runtime_state/v1;runtimestatev1\xa2\x02\x03CCR\xaa\x02\x1bChatto.Core.RuntimeState.V1\xca\x02\x1bChatto\\Core\\RuntimeState\\V1\xe2\x02'Chatto\\Core\\RuntimeState\\V1\\GPBMetadata\xea\x02\x1eChatto::Core::RuntimeState::V1b\x06proto3"
 
 var (
@@ -162,18 +414,25 @@ func file_chatto_core_runtime_state_v1_push_proto_rawDescGZIP() []byte {
 	return file_chatto_core_runtime_state_v1_push_proto_rawDescData
 }
 
-var file_chatto_core_runtime_state_v1_push_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_chatto_core_runtime_state_v1_push_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_chatto_core_runtime_state_v1_push_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_chatto_core_runtime_state_v1_push_proto_goTypes = []any{
-	(*PushSubscription)(nil),      // 0: chatto.core.runtime_state.v1.PushSubscription
-	(*timestamppb.Timestamp)(nil), // 1: google.protobuf.Timestamp
+	(NativePushDevicePlatform)(0), // 0: chatto.core.runtime_state.v1.NativePushDevicePlatform
+	(*PushSubscription)(nil),      // 1: chatto.core.runtime_state.v1.PushSubscription
+	(*NativePushDevice)(nil),      // 2: chatto.core.runtime_state.v1.NativePushDevice
+	(*CallRing)(nil),              // 3: chatto.core.runtime_state.v1.CallRing
+	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
 }
 var file_chatto_core_runtime_state_v1_push_proto_depIdxs = []int32{
-	1, // 0: chatto.core.runtime_state.v1.PushSubscription.created_at:type_name -> google.protobuf.Timestamp
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	4, // 0: chatto.core.runtime_state.v1.PushSubscription.created_at:type_name -> google.protobuf.Timestamp
+	0, // 1: chatto.core.runtime_state.v1.NativePushDevice.platform:type_name -> chatto.core.runtime_state.v1.NativePushDevicePlatform
+	4, // 2: chatto.core.runtime_state.v1.NativePushDevice.saved_at:type_name -> google.protobuf.Timestamp
+	4, // 3: chatto.core.runtime_state.v1.CallRing.rung_at:type_name -> google.protobuf.Timestamp
+	4, // [4:4] is the sub-list for method output_type
+	4, // [4:4] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_chatto_core_runtime_state_v1_push_proto_init() }
@@ -186,13 +445,14 @@ func file_chatto_core_runtime_state_v1_push_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_chatto_core_runtime_state_v1_push_proto_rawDesc), len(file_chatto_core_runtime_state_v1_push_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   1,
+			NumEnums:      1,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_chatto_core_runtime_state_v1_push_proto_goTypes,
 		DependencyIndexes: file_chatto_core_runtime_state_v1_push_proto_depIdxs,
+		EnumInfos:         file_chatto_core_runtime_state_v1_push_proto_enumTypes,
 		MessageInfos:      file_chatto_core_runtime_state_v1_push_proto_msgTypes,
 	}.Build()
 	File_chatto_core_runtime_state_v1_push_proto = out.File

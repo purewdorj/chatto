@@ -4,25 +4,26 @@
   signed-in server. The ringtone plays while the banner shows, except in Do
   Not Disturb. When the browser blocks the ringtone, or the tab is in the
   background, a system notification also signals the call, if the user
-  granted notification permission. **Join** opens the conversation with the call panel and joins
+  granted notification permission. In the iOS app, CallKit rings instead of
+  the in-app ringtone when the server can reach the device; the native ring
+  stops together with the banner. **Join** opens the conversation with the call panel and joins
   the call. **Decline** stops the ring on this device only; the call
   continues for the caller.
 -->
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { goto } from '$app/navigation';
   import { serverRegistry } from '$lib/client';
   import UserAvatar from '$lib/components/UserAvatar.svelte';
   import { Button } from '$lib/ui/form';
   import { canPlayRingtone, startRingtone } from '$lib/audio/ringtone';
   import { m } from '$lib/i18n/messages';
-  import { conversationPath } from '$lib/navigation/conversationPath';
+  import { joinIncomingCall } from '$lib/navigation/joinIncomingCall';
+  import { endNativeCall, nativeCallsRingInForeground } from '$lib/desktop/nativeCalls';
+  import { nativePush } from '$lib/notifications/nativePushNotifications.svelte';
   import { showIncomingCallNotification } from '$lib/notifications/incomingCallNotification';
   import { notificationAlertsMuted } from '$lib/notifications/notificationAlerts';
-  import { getAppUiState, getRoomSidebarPresentation } from '$lib/state/appUi.svelte';
-  import { getVoiceCallJoinErrorMessage } from '$lib/state/server/voiceCall.svelte';
+  import { getAppUiState } from '$lib/state/appUi.svelte';
   import { serverUi } from '$lib/state/server/serverUi';
-  import { toast } from '$lib/ui/toast';
 
   const appUi = getAppUiState();
 
@@ -54,7 +55,22 @@
 
   // Ring only while a call rings and the viewer accepts interruptions.
   $effect(() => {
-    if (!ringKey || muted) return;
+    if (!ringKey) return;
+    const { serverId, callId } = untrack(() => ({
+      serverId: incoming!.serverId,
+      callId: incoming!.call.callId
+    }));
+    // The ring ends when the viewer joins, declines, or the call ends. The
+    // native call UI of the mobile apps rings the same call and stops with it.
+    const stopNative = () => endNativeCall(callId);
+    // iOS CallKit rings this call already when the server can reach it. A
+    // later registration change must not restart or end this ring.
+    const ringsNatively = untrack(
+      () => nativeCallsRingInForeground() && nativePush.isVoipRegistered(serverId)
+    );
+    if (muted || ringsNatively) {
+      return stopNative;
+    }
     const stopRingtone = startRingtone();
     const closeNotification = untrack(() =>
       document.visibilityState !== 'visible' || !canPlayRingtone()
@@ -64,23 +80,13 @@
     return () => {
       stopRingtone();
       closeNotification();
+      stopNative();
     };
   });
 
   async function join(): Promise<void> {
     if (!incoming) return;
-    const { serverId, store, ui, call } = incoming;
-    ui.incomingCall.clear();
-    appUi.requestRoomSidebarPanel(serverId, call.roomId, 'call', getRoomSidebarPresentation());
-    await goto(conversationPath(serverId, call.roomId, { store }));
-    const livekitUrl = store.serverInfo.livekitUrl;
-    if (!livekitUrl) return;
-    try {
-      await ui.voiceCall.join(livekitUrl, call.roomId);
-    } catch (err) {
-      store.handleVoiceCallJoinFailed(call.roomId);
-      toast.error(getVoiceCallJoinErrorMessage(err));
-    }
+    await joinIncomingCall(appUi, incoming.serverId, incoming.store, incoming.call.roomId);
   }
 
   function decline(): void {

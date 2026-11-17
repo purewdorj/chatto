@@ -98,3 +98,87 @@ export class DeleteSubscriptionResponse extends Message<DeleteSubscriptionRespon
     return proto3.util.equals(DeleteSubscriptionResponse, a, b);
   }
 }
+
+/**
+ * Capability-authenticated request to remove an exact native push device.
+ *
+ * @generated from message chatto.auth.v1.DeleteNativeDeviceRequest
+ */
+export class DeleteNativeDeviceRequest extends Message<DeleteNativeDeviceRequest> {
+  /**
+   * Device token from the original RegisterNativeDevice request.
+   *
+   * @generated from field: string token = 1;
+   */
+  token = "";
+
+  /**
+   * Per-save capability supplied with the original RegisterNativeDevice
+   * request. Cleanup is a no-op after any later save replaces this token.
+   *
+   * @generated from field: string cleanup_token = 2;
+   */
+  cleanupToken = "";
+
+  constructor(data?: PartialMessage<DeleteNativeDeviceRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chatto.auth.v1.DeleteNativeDeviceRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "cleanup_token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteNativeDeviceRequest {
+    return new DeleteNativeDeviceRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteNativeDeviceRequest {
+    return new DeleteNativeDeviceRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteNativeDeviceRequest {
+    return new DeleteNativeDeviceRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteNativeDeviceRequest | PlainMessage<DeleteNativeDeviceRequest> | undefined, b: DeleteNativeDeviceRequest | PlainMessage<DeleteNativeDeviceRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteNativeDeviceRequest, a, b);
+  }
+}
+
+/**
+ * Response from capability-authenticated native device cleanup.
+ * Success does not reveal whether a matching device existed.
+ *
+ * @generated from message chatto.auth.v1.DeleteNativeDeviceResponse
+ */
+export class DeleteNativeDeviceResponse extends Message<DeleteNativeDeviceResponse> {
+  constructor(data?: PartialMessage<DeleteNativeDeviceResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chatto.auth.v1.DeleteNativeDeviceResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteNativeDeviceResponse {
+    return new DeleteNativeDeviceResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteNativeDeviceResponse {
+    return new DeleteNativeDeviceResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteNativeDeviceResponse {
+    return new DeleteNativeDeviceResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteNativeDeviceResponse | PlainMessage<DeleteNativeDeviceResponse> | undefined, b: DeleteNativeDeviceResponse | PlainMessage<DeleteNativeDeviceResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteNativeDeviceResponse, a, b);
+  }
+}

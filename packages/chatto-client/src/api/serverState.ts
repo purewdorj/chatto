@@ -3,6 +3,7 @@ import { AdminServerService } from '@chatto/api-types/admin/v1/server_connect';
 import { ServerService } from '@chatto/api-types/api/v1/server_state_connect';
 import { ServerDiscoveryService } from '@chatto/api-types/chatto/discovery/v1/server_connect';
 import { ViewerService } from '@chatto/api-types/api/v1/viewer_connect';
+import type { NativePushPlatform } from '@chatto/api-types/api/v1/push_notifications_pb';
 import { mapServerProfile, type ServerProfile } from './serverProfile.js';
 
 export type AuthenticatedServerState = {
@@ -15,6 +16,8 @@ export type AuthenticatedServerState = {
   motd: string | null;
   pushNotificationsEnabled: boolean;
   vapidPublicKey: string | null;
+  /** Native mobile push services that this server can deliver to; empty when none. */
+  nativePushPlatforms: NativePushPlatform[];
   livekitUrl: string | null;
   videoProcessingEnabled: boolean;
   /** Maximum upload size in bytes for all files, including GIFs and videos. */
@@ -116,6 +119,7 @@ export async function getAuthenticatedServerState(
     motd: motdResponse.motd ?? null,
     pushNotificationsEnabled: runtime?.pushNotificationsEnabled ?? false,
     vapidPublicKey: runtime?.vapidPublicKey ?? null,
+    nativePushPlatforms: runtime?.nativePushPlatforms ?? [],
     livekitUrl: runtime?.livekitUrl ?? null,
     videoProcessingEnabled: runtime?.videoProcessingEnabled ?? false,
     maxUploadSize: Number(runtime?.maxUploadSize ?? 0),

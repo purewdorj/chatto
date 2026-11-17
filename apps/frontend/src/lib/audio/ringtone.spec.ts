@@ -1,5 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const native = vi.hoisted(() => ({
+  available: false,
+  stop: vi.fn(),
+  start: vi.fn()
+}));
+
+vi.mock('$lib/desktop/nativeRingtone', () => ({
+  hasNativeRingtone: () => native.available,
+  startNativeRingtone: () => {
+    native.start();
+    return native.stop;
+  }
+}));
+
 /** A Web Audio context that starts suspended, as before a user interaction. */
 class FakeAudioContext {
   static instances: FakeAudioContext[] = [];
@@ -86,5 +100,40 @@ describe('ringtone', () => {
     await vi.advanceTimersByTimeAsync(RING_PERIOD_MS * 2);
     expect(bursts(ctx)).toBe(2);
     expect(ctx.oscillators.every((o) => o.stop.mock.calls.length > 0)).toBe(true);
+  });
+
+  describe('in a mobile app', () => {
+    beforeEach(() => {
+      native.available = true;
+      native.start.mockClear();
+      native.stop.mockClear();
+    });
+    afterEach(() => {
+      native.available = false;
+    });
+
+    it('rings natively without Web Audio and reports that it can play', async () => {
+      const { canPlayRingtone, startRingtone } = await import('./ringtone');
+      const stop = startRingtone();
+
+      expect(native.start).toHaveBeenCalledTimes(1);
+      expect(FakeAudioContext.instances).toHaveLength(0);
+      expect(canPlayRingtone()).toBe(true);
+
+      stop();
+      stop();
+      expect(native.stop).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops the previous native ring when a new one starts', async () => {
+      const { startRingtone } = await import('./ringtone');
+      startRingtone();
+      const stop = startRingtone();
+
+      expect(native.start).toHaveBeenCalledTimes(2);
+      expect(native.stop).toHaveBeenCalledTimes(1);
+      stop();
+      expect(native.stop).toHaveBeenCalledTimes(2);
+    });
   });
 });

@@ -541,6 +541,66 @@ SMTP is the default transactional email transport. Set `email.transport = "jmap"
   VAPID subject identifier. Use an operator email address, optionally prefixed with `mailto:`, or an `https:` contact URL.
 </EnvVar>
 
+### Native Push: APNs
+
+Native iOS push through the Apple Push Notification service. Independent of Web Push. Apple receives the notification content. See [Notifications & Push](/guides/operations/notifications-web-push/#enable-native-mobile-push).
+
+<EnvVar name="CHATTO_PUSH_APNS_ENABLED" toml="push.apns.enabled" default="false">
+  Enable native iOS push through APNs. The server does not start when the key is missing or unusable.
+</EnvVar>
+
+<EnvVar name="CHATTO_PUSH_APNS_TEAM_ID" toml="push.apns.team_id">
+  Apple Developer Team ID (10 characters).
+</EnvVar>
+
+<EnvVar name="CHATTO_PUSH_APNS_KEY_ID" toml="push.apns.key_id">
+  Key ID of the APNs authentication key (10 characters).
+</EnvVar>
+
+<EnvVar name="CHATTO_PUSH_APNS_PRIVATE_KEY" toml="push.apns.private_key">
+  Contents of the APNs authentication key (`.p8` PEM). Set this or `CHATTO_PUSH_APNS_PRIVATE_KEY_FILE`.
+</EnvVar>
+
+<EnvVar name="CHATTO_PUSH_APNS_PRIVATE_KEY_FILE" toml="push.apns.private_key_file">
+  Path to the APNs authentication key (`.p8` PEM file). Set this or `CHATTO_PUSH_APNS_PRIVATE_KEY`.
+</EnvVar>
+
+<EnvVar name="CHATTO_PUSH_APNS_TOPICS" toml="push.apns.topics">
+  Comma-separated iOS bundle IDs that can register devices. Each bundle ID is also the APNs topic.
+</EnvVar>
+
+<EnvVar name="CHATTO_PUSH_APNS_INCLUDE_PREVIEWS" toml="push.apns.include_previews" default="true">
+  Include message previews, sender names, and room names in APNs notifications. Set `false` to send generic text only.
+</EnvVar>
+
+### Native Push: FCM
+
+Native Android push through Firebase Cloud Messaging. Independent of Web Push. Google receives the notification content.
+
+<EnvVar name="CHATTO_PUSH_FCM_ENABLED" toml="push.fcm.enabled" default="false">
+  Enable native Android push through FCM. The server does not start when the service account key is missing or unusable.
+</EnvVar>
+
+<EnvVar name="CHATTO_PUSH_FCM_PROJECT_ID" toml="push.fcm.project_id">
+  Firebase project ID. Default: `project_id` from the service account key.
+</EnvVar>
+
+<EnvVar name="CHATTO_PUSH_FCM_SERVICE_ACCOUNT_JSON" toml="push.fcm.service_account_json">
+  Contents of the Firebase service account JSON key. Set this or `CHATTO_PUSH_FCM_SERVICE_ACCOUNT_FILE`.
+</EnvVar>
+
+<EnvVar name="CHATTO_PUSH_FCM_SERVICE_ACCOUNT_FILE" toml="push.fcm.service_account_file">
+  Path to the Firebase service account JSON key. Set this or `CHATTO_PUSH_FCM_SERVICE_ACCOUNT_JSON`.
+</EnvVar>
+
+<EnvVar name="CHATTO_PUSH_FCM_APP_IDS" toml="push.fcm.app_ids">
+  Comma-separated Android package names that can register devices.
+</EnvVar>
+
+<EnvVar name="CHATTO_PUSH_FCM_INCLUDE_PREVIEWS" toml="push.fcm.include_previews" default="true">
+  Include message previews, sender names, and room names in FCM notifications. Set `false` to send generic text only.
+</EnvVar>
+
 ## Asset Processing
 
 <EnvVar name="CHATTO_ASSET_PROCESSING_ENABLED" toml="asset_processing.enabled" default="false">

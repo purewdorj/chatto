@@ -6,3 +6,13 @@ ios/App/App/config.xml
 ios/App/App.xcodeproj/xcuserdata/
 ios/App/App.xcodeproj/project.xcworkspace/xcuserdata/
 ios/App/CapApp-SPM/.build/
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+android/app/src/main/res/xml/config.xml
+android/capacitor-cordova-android-plugins/
+android/app/build/
+android/build/
+android/.gradle/
+android/.idea/
+android/local.properties

@@ -3,11 +3,12 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { DeleteSubscriptionRequest, DeleteSubscriptionResponse } from "./push_subscription_cleanup_pb.js";
+import { DeleteNativeDeviceRequest, DeleteNativeDeviceResponse, DeleteSubscriptionRequest, DeleteSubscriptionResponse } from "./push_subscription_cleanup_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 
 /**
- * Public capability-authenticated cleanup for browser push subscriptions.
+ * Public capability-authenticated cleanup for browser push subscriptions and
+ * native push devices.
  *
  * @generated from service chatto.auth.v1.PushSubscriptionCleanupService
  */
@@ -26,6 +27,21 @@ export const PushSubscriptionCleanupService = {
       name: "DeleteSubscription",
       I: DeleteSubscriptionRequest,
       O: DeleteSubscriptionResponse,
+      kind: MethodKind.Unary,
+      idempotency: MethodIdempotency.Idempotent,
+    },
+    /**
+     * Removes the exact current native push device when its device token and
+     * per-save cleanup token match. This public RPC requires those capabilities,
+     * not an authenticated account session, and does not reveal whether a match
+     * existed.
+     *
+     * @generated from rpc chatto.auth.v1.PushSubscriptionCleanupService.DeleteNativeDevice
+     */
+    deleteNativeDevice: {
+      name: "DeleteNativeDevice",
+      I: DeleteNativeDeviceRequest,
+      O: DeleteNativeDeviceResponse,
       kind: MethodKind.Unary,
       idempotency: MethodIdempotency.Idempotent,
     },

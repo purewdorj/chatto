@@ -50,6 +50,7 @@
   aria-haspopup="dialog"
   aria-expanded={trigger !== null}
   onpointerdown={(event) => event.preventDefault()}
+  onmousedown={(event) => event.preventDefault()}
   onclick={(event) => (trigger = event.currentTarget)}
 >
   <span aria-hidden="true" class="iconify icon-[uil--smile] text-[15px]"></span>

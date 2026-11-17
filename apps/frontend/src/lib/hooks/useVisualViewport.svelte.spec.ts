@@ -28,8 +28,8 @@ function resize(height: number, width = viewport.width) {
 }
 
 describe('useVisualViewport keyboard state', () => {
-  it('leaves native iOS sizing and header visibility to the host', () => {
-    vi.spyOn(Capacitor, 'getPlatform').mockReturnValue('ios');
+  it('leaves native app sizing and header visibility to the host', () => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
     start();
     resize(400);
     expect(document.body.hasAttribute('data-keyboard-open')).toBe(false);

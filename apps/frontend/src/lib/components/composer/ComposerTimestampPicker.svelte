@@ -104,6 +104,7 @@
   label={m('composer.timestamp.insert_label')}
   type="button"
   onpointerdown={(event) => event.preventDefault()}
+  onmousedown={(event) => event.preventDefault()}
   onclick={openPicker}
   {disabled}
   title={m('composer.timestamp.insert_label')}

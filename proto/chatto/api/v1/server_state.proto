@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package chatto.api.v1;
 
+import "chatto/api/v1/push_notifications.proto";
 import "chatto/api/v1/server.proto";
 
 // Request for the authenticated public server profile.
@@ -40,6 +41,11 @@ message ServerRuntimeConfig {
   int64 max_video_upload_size = 7 [deprecated = true];
   // Message edit window in seconds.
   int32 message_edit_window_seconds = 8;
+  // Native push platforms that this server delivers to. Empty when the server
+  // cannot deliver native push. Servers before this field also send it empty.
+  // Native push is independent of Web Push: push_notifications_enabled
+  // describes only Web Push.
+  repeated NativePushPlatform native_push_platforms = 9;
 }
 
 // Request for authenticated server runtime configuration.

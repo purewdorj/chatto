@@ -1,4 +1,5 @@
-// Package push provides Web Push notification functionality.
+// Package push provides browser Web Push and native APNs and FCM push
+// notification delivery.
 package push
 
 import (
@@ -93,6 +94,48 @@ type Payload struct {
 	// Action is empty for regular user-visible notifications. Control pushes set
 	// it to a command such as "dismiss" and do not display a new notification.
 	Action string `json:"action,omitempty"`
+	// Kind classifies the notification for native push: KindMessage (the
+	// default when empty), KindCall, KindCallEnd, or KindTest. Web Push does
+	// not send it.
+	Kind NotificationKind `json:"-"`
+	// GroupID groups related native notifications, for example all
+	// notifications of one room. Native push sends it as the APNs thread-id.
+	GroupID string `json:"-"`
+	// CallID identifies the call of a KindCall or KindCallEnd notification.
+	CallID string `json:"-"`
+	// CallerName is the display name of the account that started the call of
+	// a KindCall notification. Native push sends it as the callerName data
+	// key, or a generic text when the provider must not receive names.
+	CallerName string `json:"-"`
+}
+
+// NotificationKind classifies a push notification for native delivery.
+type NotificationKind string
+
+const (
+	// KindMessage is room, thread, DM, reaction, and invitation activity.
+	KindMessage NotificationKind = "message"
+	// KindCall is an incoming call that rings the recipient.
+	KindCall NotificationKind = "call"
+	// KindCallEnd stops the ring of an earlier KindCall push, because the call
+	// ended or the recipient joined it. It shows nothing by itself.
+	KindCallEnd NotificationKind = "call_end"
+	// KindTest is a test notification. It contains no private content.
+	KindTest NotificationKind = "test"
+)
+
+// IsCallKind reports whether kind is KindCall or KindCallEnd. Only these
+// kinds go to APNs VoIP devices.
+func (k NotificationKind) IsCallKind() bool {
+	return k == KindCall || k == KindCallEnd
+}
+
+// kindOrDefault returns the payload kind, with KindMessage for an empty kind.
+func (p Payload) kindOrDefault() NotificationKind {
+	if p.Kind == "" {
+		return KindMessage
+	}
+	return p.Kind
 }
 
 type declarativeNotification struct {
@@ -620,6 +663,7 @@ func buildPayloadFromOccurrence(
 		payload.Body = "Open the room to accept or decline the invitation."
 		payload.Tag = OccurrenceTag(occurrence)
 		payload.URL = buildNotificationURL(navigationBaseURL, invitation.GetRoomId(), "", "")
+		payload.GroupID = invitation.GetRoomId()
 		return payload
 	}
 
@@ -629,6 +673,7 @@ func buildPayloadFromOccurrence(
 		payload.Body = "You have a new notification"
 		return payload
 	}
+	payload.GroupID = target.GetRoomId()
 
 	switch {
 	case occurrence.GetSignal().GetDirectMessageReceived() != nil:

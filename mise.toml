@@ -316,6 +316,28 @@ depends = ["mobile-ios-sync"]
 dir = "apps/mobile"
 run = "pnpm build:ios"
 
+# The Android Gradle Plugin needs JDK 21. Set ANDROID_HOME to the Android SDK
+# (platform 36 and build tools). Without android/app/google-services.json the
+# app builds, but push registration fails.
+[tasks.mobile-android-sync]
+description = "Bundle the shared frontend into the experimental Android app"
+depends = ["build-frontend"]
+dir = "apps/mobile"
+run = "pnpm sync:android"
+
+[tasks.mobile-android-open]
+description = "Open the current Android app in Android Studio"
+depends = ["mobile-android-sync"]
+dir = "apps/mobile"
+run = "pnpm open:android"
+
+[tasks.mobile-android-build]
+description = "Build the experimental Android app as a debug APK"
+depends = ["mobile-android-sync"]
+dir = "apps/mobile"
+tools = { java = "temurin-21.0.13+9.0.LTS" }
+run = "pnpm build:android"
+
 [tasks.test-runling-bot]
 description = "Test the Runling webhook bot example"
 depends = ["setup-frontend"]
@@ -1120,6 +1142,9 @@ run = [
     "rm -rf apps/desktop/dist",
     "rm -rf apps/mobile/www apps/mobile/ios/App/App/public",
     "rm -f apps/mobile/ios/App/App/capacitor.config.json apps/mobile/ios/App/App/config.xml",
+    "rm -rf apps/mobile/android/app/src/main/assets/public apps/mobile/android/capacitor-cordova-android-plugins",
+    "rm -f apps/mobile/android/app/src/main/assets/capacitor.config.json apps/mobile/android/app/src/main/assets/capacitor.plugins.json apps/mobile/android/app/src/main/res/xml/config.xml",
+    "rm -rf apps/mobile/android/app/build apps/mobile/android/build apps/mobile/android/.gradle",
     "rm -rf packages/chatto-client/dist packages/translatto/dist packages/runling/dist packages/runling/.svelte-kit",
     "rm -rf .context/build-frontend",
 ]

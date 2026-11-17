@@ -1450,6 +1450,7 @@ Authenticated server runtime settings used by clients.
 | `max_upload_size` | `int64` | Maximum upload size in bytes for all files, including GIFs and videos. |
 | `max_video_upload_size` | `int64` | **Deprecated.** Deprecated alias of max_upload_size. Both fields have the same value. |
 | `message_edit_window_seconds` | `int32` | Message edit window in seconds. |
+| `native_push_platforms` | repeated [`NativePushPlatform`](#chatto-api-v1-NativePushPlatform) | Native push platforms that this server delivers to. Empty when the server cannot deliver native push. Servers before this field also send it empty. Native push is independent of Web Push: push_notifications_enabled describes only Web Push. |
 
 <a id="chatto-api-v1-ActiveCall"></a>
 
@@ -2417,6 +2418,19 @@ Delivery behavior for one notification signal class.
 | `NOTIFICATION_DELIVERY_MODE_ALERT` | `3` | Deprecated alias for NOTIFICATION_DELIVERY_MODE_PUSH_NOTIFICATION. |
 | `NOTIFICATION_DELIVERY_MODE_PUSH_NOTIFICATION` | `3` | Matching activity creates an in-app notification and may send push. |
 | `NOTIFICATION_DELIVERY_MODE_UNREAD_BADGE` | `4` | Matching activity adds a neutral unread indicator without creating a notification occurrence, playing a sound, or sending push. |
+
+<a id="chatto-api-v1-NativePushPlatform"></a>
+
+### NativePushPlatform
+
+Push service of a native mobile push device.
+
+| Name | Number | Description |
+| --- | --- | --- |
+| `NATIVE_PUSH_PLATFORM_UNSPECIFIED` | `0` | Not set. Requests with this value fail. |
+| `NATIVE_PUSH_PLATFORM_APNS` | `1` | Apple Push Notification service (APNs), used by iOS and iPadOS apps. |
+| `NATIVE_PUSH_PLATFORM_FCM` | `2` | Firebase Cloud Messaging (FCM), used by Android apps. |
+| `NATIVE_PUSH_PLATFORM_APNS_VOIP` | `3` | APNs VoIP pushes through PushKit, used by iOS apps to ring incoming calls through CallKit. The server sends only call pushes to these devices: kind "call" when a call rings the account, and kind "call_end" when that ring stops. The app must report every VoIP push to CallKit, also a "call_end" push for a call that it does not know. Use the PushKit token, the bundle ID as app_id, and the same apns_sandbox rules as APNS. The server sends to the APNs topic "<app_id>.voip". The server includes this value in native_push_platforms when it delivers through APNs. |
 
 <a id="chatto-api-v1-CallMediaPublisherKind"></a>
 

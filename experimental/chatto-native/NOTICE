@@ -19,8 +19,8 @@ Copyright 2017-2018 IBM Corp. with Reserved Font Name "Plex".
 The font license is in assets/OFL.txt. Font source revisions are in the
 adjacent .license files.
 
-The app bundles the unmodified Chatto icon from the web frontend, licensed
-under Apache-2.0. Copyright 2026 ChattoCorp GmbH. See
+The app bundles the Setunari Group knot icon from the web frontend, licensed
+under AGPL-3.0-or-later. Copyright 2026 Setunari Group LLC. See
 assets/chatto-icon.png.license.
 
 The app also uses these libraries:

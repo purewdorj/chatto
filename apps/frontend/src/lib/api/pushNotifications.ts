@@ -1,5 +1,6 @@
 import { createChattoClient, type ConnectAPIConfig } from '@chatto/client/api/connect';
 import { PushNotificationService } from '@chatto/api-types/api/v1/push_notifications_connect';
+import type { NativePushPlatform } from '@chatto/api-types/api/v1/push_notifications_pb';
 import { PushSubscriptionCleanupService } from '@chatto/api-types/chatto/auth/v1/push_subscription_cleanup_connect';
 
 export type SubscribePushInput = {
@@ -9,6 +10,18 @@ export type SubscribePushInput = {
   clientHost: string;
   cleanupToken: string;
   userAgent?: string;
+};
+
+/** A native APNs or FCM device registration for the signed-in account. */
+export type RegisterNativeDeviceInput = {
+  platform: NativePushPlatform;
+  token: string;
+  /** iOS bundle ID or Android package name; the server accepts only configured apps. */
+  appId: string;
+  /** True for APNs development builds. Ignored for FCM. */
+  apnsSandbox: boolean;
+  deviceName?: string;
+  cleanupToken: string;
 };
 
 export type SubscribePushResult = {
@@ -50,6 +63,17 @@ export function createPushNotificationAPI(config: ConnectAPIConfig) {
     ): Promise<boolean> {
       await cleanupClient.deleteSubscription({ endpoint, auth, cleanupToken });
       return true;
+    },
+
+    async registerNativeDevice(
+      input: RegisterNativeDeviceInput,
+      options: PushRequestOptions = {}
+    ): Promise<void> {
+      await client.registerNativeDevice(input, { signal: options.signal });
+    },
+
+    async unregisterNativeDevice(token: string): Promise<void> {
+      await client.unregisterNativeDevice({ token });
     },
 
     async sendTestNotification(): Promise<boolean> {

@@ -1023,6 +1023,23 @@ describe('MessageComposer', () => {
       }
     );
 
+    it('keeps the editor focused through the mouse events of a Send tap', async () => {
+      const { container } = renderMessageComposer({ roomId: 'room-send-focus' });
+      const editor = await findEditor(container);
+      await typeInEditor(editor, 'keep the keyboard open');
+      const send = q(container, 'button[title="Send message"]')!;
+
+      // iOS WebKit moves focus with the mouse events of a tap, also when
+      // pointerdown is cancelled. Both must be cancelled to keep the keyboard open.
+      for (const event of [
+        new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerType: 'touch' }),
+        new MouseEvent('mousedown', { bubbles: true, cancelable: true })
+      ]) {
+        send.dispatchEvent(event);
+        expect(event.defaultPrevented).toBe(true);
+      }
+    });
+
     it('preserves an editor selection when a mouse drag ends over composer padding', async () => {
       const { container } = renderMessageComposer({ roomId: 'room-selection-padding' });
       const editor = await findEditor(container);

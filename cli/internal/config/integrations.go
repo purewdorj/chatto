@@ -103,18 +103,65 @@ func (c EmailConfig) TransportOrDefault() EmailTransport {
 	return transport
 }
 
-// PushConfig contains settings for Web Push notifications.
-// Push notifications allow messages to be delivered even when the browser is closed.
+// PushConfig contains settings for push notifications.
+// Push notifications allow messages to be delivered even when the browser or
+// the mobile app is closed. Enabled and the VAPID fields configure browser Web
+// Push. APNs and FCM configure native mobile push. Each transport is
+// independent of the others.
 type PushConfig struct {
 	Enabled         bool   `toml:"enabled" env:"CHATTO_PUSH_ENABLED" comment:"Enable Web Push notifications. Default: false (opt-in to avoid third-party server contact)."`
 	VAPIDPublicKey  string `toml:"vapid_public_key" env:"CHATTO_PUSH_VAPID_PUBLIC_KEY" comment:"VAPID public key (base64-encoded). Generate with: openssl ecparam -genkey -name prime256v1 | openssl ec -pubout"`
 	VAPIDPrivateKey string `toml:"vapid_private_key" env:"CHATTO_PUSH_VAPID_PRIVATE_KEY" comment:"VAPID private key (base64-encoded). NEVER SHARE THIS!"`
 	VAPIDSubject    string `toml:"vapid_subject" env:"CHATTO_PUSH_VAPID_SUBJECT" comment:"VAPID subject (operator email, optional mailto: prefix, or https: URL). Used by push services to contact the operator."`
+
+	APNs APNsConfig `toml:"apns,commented" comment:"Native iOS push through the Apple Push Notification service (APNs). Independent of Web Push."`
+	FCM  FCMConfig  `toml:"fcm,commented" comment:"Native Android push through Firebase Cloud Messaging (FCM). Independent of Web Push."`
 }
 
 // IsConfigured returns true if push notifications are enabled and all required VAPID fields are set.
 func (c *PushConfig) IsConfigured() bool {
 	return c.Enabled && c.VAPIDPublicKey != "" && c.VAPIDPrivateKey != "" && c.VAPIDSubject != ""
+}
+
+// NativeConfigured reports whether at least one native push transport is
+// enabled. Validate checks the required fields of each enabled transport.
+func (c *PushConfig) NativeConfigured() bool {
+	return c.APNs.Enabled || c.FCM.Enabled
+}
+
+// APNsConfig contains settings for native iOS push through APNs with
+// token-based (.p8 signing key) authentication.
+type APNsConfig struct {
+	Enabled         bool     `toml:"enabled" env:"CHATTO_PUSH_APNS_ENABLED" comment:"Enable native iOS push through APNs. Default: false. Notification content goes to Apple."`
+	TeamID          string   `toml:"team_id" env:"CHATTO_PUSH_APNS_TEAM_ID" comment:"Apple Developer Team ID (10 characters)."`
+	KeyID           string   `toml:"key_id" env:"CHATTO_PUSH_APNS_KEY_ID" comment:"Key ID of the APNs authentication key (10 characters)."`
+	PrivateKey      string   `toml:"private_key,commented" env:"CHATTO_PUSH_APNS_PRIVATE_KEY" comment:"Contents of the APNs authentication key (.p8 PEM). Set this or private_key_file. NEVER SHARE THIS!"`
+	PrivateKeyFile  string   `toml:"private_key_file" env:"CHATTO_PUSH_APNS_PRIVATE_KEY_FILE" comment:"Path to the APNs authentication key (.p8 PEM file). Set this or private_key."`
+	Topics          []string `toml:"topics" env:"CHATTO_PUSH_APNS_TOPICS" comment:"iOS bundle IDs that can register devices. Each bundle ID is also the APNs topic. Example: [\"mn.setunari.chatto.mobile\"]"`
+	IncludePreviews *bool    `toml:"include_previews,commented" env:"CHATTO_PUSH_APNS_INCLUDE_PREVIEWS" comment:"Include message previews and names in APNs notifications. Apple can read this content. Set false to send generic text only. Default: true."`
+}
+
+// IncludePreviewsOrDefault reports whether APNs notifications contain message
+// previews and names. The default is true.
+func (c *APNsConfig) IncludePreviewsOrDefault() bool {
+	return c.IncludePreviews == nil || *c.IncludePreviews
+}
+
+// FCMConfig contains settings for native Android push through the FCM HTTP v1
+// API with a Google service account.
+type FCMConfig struct {
+	Enabled            bool     `toml:"enabled" env:"CHATTO_PUSH_FCM_ENABLED" comment:"Enable native Android push through FCM. Default: false. Notification content goes to Google."`
+	ProjectID          string   `toml:"project_id,commented" env:"CHATTO_PUSH_FCM_PROJECT_ID" comment:"Firebase project ID. Default: project_id from the service account JSON."`
+	ServiceAccountJSON string   `toml:"service_account_json,commented" env:"CHATTO_PUSH_FCM_SERVICE_ACCOUNT_JSON" comment:"Contents of the Firebase service account JSON key. Set this or service_account_file. NEVER SHARE THIS!"`
+	ServiceAccountFile string   `toml:"service_account_file" env:"CHATTO_PUSH_FCM_SERVICE_ACCOUNT_FILE" comment:"Path to the Firebase service account JSON key. Set this or service_account_json."`
+	AppIDs             []string `toml:"app_ids" env:"CHATTO_PUSH_FCM_APP_IDS" comment:"Android package names that can register devices. Example: [\"mn.setunari.chatto.mobile\"]"`
+	IncludePreviews    *bool    `toml:"include_previews,commented" env:"CHATTO_PUSH_FCM_INCLUDE_PREVIEWS" comment:"Include message previews and names in FCM notifications. Google can read this content. Set false to send generic text only. Default: true."`
+}
+
+// IncludePreviewsOrDefault reports whether FCM notifications contain message
+// previews and names. The default is true.
+func (c *FCMConfig) IncludePreviewsOrDefault() bool {
+	return c.IncludePreviews == nil || *c.IncludePreviews
 }
 
 // VideoConfig controls whether video uploads are accepted.

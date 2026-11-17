@@ -168,6 +168,8 @@
   // Web Push registration is not needed for the first paint. Loading it on
   // demand keeps it out of every chat route's initial bundle.
   const pushSubscriptionRefresh = import('$lib/components/PushSubscriptionRefresh.svelte');
+  // Native push registration exists only in the mobile apps.
+  const nativePushRefresh = import('$lib/components/NativePushRefresh.svelte');
 </script>
 
 <AuthStatusNotice />
@@ -176,6 +178,9 @@
 {/if}
 {#await pushSubscriptionRefresh then { default: PushSubscriptionRefresh }}
   <PushSubscriptionRefresh />
+{/await}
+{#await nativePushRefresh then { default: NativePushRefresh }}
+  <NativePushRefresh />
 {/await}
 {#if verifiedOriginUserId}
   <WelcomeBanner />

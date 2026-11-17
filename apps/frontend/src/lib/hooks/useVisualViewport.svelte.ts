@@ -26,9 +26,10 @@ import { Capacitor } from '@capacitor/core';
  */
 export function useVisualViewport() {
   $effect(() => {
-    // The iOS host resizes the webview itself. Applying the Safari workaround
-    // as well changes header visibility and competes with native layout.
-    if (Capacitor.getPlatform() === 'ios') return;
+    // The iOS and Android hosts resize the webview themselves. Applying the
+    // Safari workaround as well changes header visibility and competes with
+    // native layout.
+    if (Capacitor.isNativePlatform()) return;
     const vv = window.visualViewport;
     if (!vv) return;
 

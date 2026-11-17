@@ -9,7 +9,8 @@ any server's panel applies to all servers. Checking it asks the browser for
 notification permission from that click; Chatto never asks without the user.
 The panel shows a notice instead of the controls when the server has no Web
 Push configuration. It also explains when this browser cannot use push or
-blocks notifications. Desktop hosts show their native notification controls.
+blocks notifications. Desktop hosts show their native notification controls,
+and the mobile apps show their native push controls.
 -->
 <script lang="ts">
   import { Code, ConnectError } from '@connectrpc/connect';
@@ -31,6 +32,8 @@ blocks notifications. Desktop hosts show their native notification controls.
   import { Hint, Panel } from '$lib/ui';
   import { Button, Checkbox } from '$lib/ui/form';
   import DesktopNotificationSettings from './DesktopNotificationSettings.svelte';
+  import NativePushSettings from './NativePushSettings.svelte';
+  import { nativePush } from '$lib/notifications/nativePushNotifications.svelte';
 
   type TestResult = { kind: 'sent' } | { kind: 'failed'; message: string };
   /** A problem of the latest checkbox change that the browser state does not show. */
@@ -146,6 +149,9 @@ blocks notifications. Desktop hosts show their native notification controls.
 </script>
 
 <DesktopNotificationSettings />
+{#if nativePush.available}
+  <NativePushSettings />
+{/if}
 {#if visible}
   <Panel title={m('settings.notifications.push.title')} icon="iconify icon-[uil--bell]">
     <div class="flex max-w-2xl flex-col gap-4" data-testid="push-notification-settings">

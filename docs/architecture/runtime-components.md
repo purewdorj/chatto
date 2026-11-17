@@ -245,7 +245,9 @@ stable machine-readable keys such as `config_model`, `message_model`, and
   projected removal; best-effort local-sound hints for notification modes; and
   direct durable push consumption from `notifications.signalled` with an
   immutable deadline and current policy, visibility, DND, and subscription
-  revalidation.
+  revalidation. One alert delivery sends to Web Push subscriptions and native
+  APNs/FCM devices at the same time
+  ([`cmd/run.go`](../../cli/cmd/run.go), [`push`](../../cli/internal/push/)).
 - **`MessageModel`**
   ([`message_model.go`](../../cli/internal/core/message_model.go),
   [`messages.go`](../../cli/internal/core/messages.go)): Operation-level message
@@ -406,7 +408,14 @@ stable machine-readable keys such as `config_model`, `message_model`, and
   current call permission enforcement. Owner diagnostics
   ([`livekit_diagnostics.go`](../../cli/internal/core/livekit_diagnostics.go))
   check LiveKit with one `ListRooms` call per request and report process-local
-  webhook times.
+  webhook times. After the replica commits a call start, an optional
+  call-started handler runs in its own goroutine; production uses it for
+  best-effort incoming-call native pushes to direct-message members
+  ([`call_alerts.go`](../../cli/internal/core/call_alerts.go)). After the
+  replica commits a join of a running call or a call end, an optional
+  ring-stopped hook claims the matching `call_ring` records in its own
+  goroutine; production sends best-effort call-end native pushes to the
+  claimed members ([`call_ring.go`](../../cli/internal/core/call_ring.go)).
 - **`MediaModel`** ([`media_model.go`](../../cli/internal/core/media_model.go),
   [`attachments.go`](../../cli/internal/core/attachments.go)): Eagerly wired
   attachment/media binary storage, signed asset and origin-scoped HLS URLs,

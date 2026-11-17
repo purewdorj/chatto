@@ -10,7 +10,12 @@
  * pointer or key press while it rings makes it audible. Check
  * {@link canPlayRingtone} to choose a second signal, such as a system
  * notification, for a ring that the browser blocks.
+ *
+ * The mobile apps ring natively instead (`$lib/desktop/nativeRingtone`). A
+ * native ring needs no interaction and follows the device's silent setting.
  */
+
+import { hasNativeRingtone, startNativeRingtone } from '$lib/desktop/nativeRingtone';
 
 /** Time from the start of one ring to the start of the next. */
 export const RING_PERIOD_MS = 3_000;
@@ -43,6 +48,7 @@ function getContext(): AudioContext | null {
  * the first user interaction after a page load, when the browser blocks audio.
  */
 export function canPlayRingtone(): boolean {
+  if (hasNativeRingtone()) return true;
   if (typeof navigator === 'undefined') return false;
   // Browsers without the User Activation API do not report the block.
   return navigator.userActivation?.hasBeenActive ?? true;
@@ -100,6 +106,16 @@ function playRing(ctx: AudioContext): AudioScheduledSourceNode[] {
  */
 export function startRingtone(): () => void {
   stopCurrent?.();
+  if (hasNativeRingtone()) {
+    const stopNative = startNativeRingtone();
+    const stop = () => {
+      if (stopCurrent !== stop) return;
+      stopCurrent = null;
+      stopNative();
+    };
+    stopCurrent = stop;
+    return stop;
+  }
   const ctx = getContext();
   if (!ctx) return () => {};
 

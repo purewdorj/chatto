@@ -210,10 +210,13 @@ Your configuration contains these secrets:
 - `core.secret_key`
 - cookie signing and encryption secrets
 - the asset signing secret
-- S3, NATS, SMTP or JMAP, login provider, Web Push, and LiveKit credentials
+- S3, NATS, SMTP or JMAP, login provider, Web Push, APNs, FCM, and LiveKit
+  credentials
 
 A change to `core.secret_key` signs out every session and makes invitation codes
-and pending sign-in links invalid. It does not change the encryption keys.
+and pending sign-in links invalid. Native push devices get no pushes until the
+mobile app registers them again, which it does when it starts. The change does
+not change the encryption keys.
 
 Protect key exports and backups with keys like the secrets above. See
 [Backup & Restore](/guides/operations/backup-restore/).
