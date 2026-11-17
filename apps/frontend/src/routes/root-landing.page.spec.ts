@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ origin: undefined as { id: string } | undefined }));
+const mocks = vi.hoisted(() => ({
+  origin: undefined as { id: string } | undefined,
+  ensureSetunariServer: vi.fn<() => Promise<string | undefined>>()
+}));
+vi.mock('$lib/serverCatalogue', () => ({ ensureSetunariServer: mocks.ensureSetunariServer }));
+vi.mock('$lib/navigation', () => ({ serverIdToSegment: (serverId: string) => serverId }));
 vi.mock('$lib/client', () => ({
   serverRegistry: {
     get originServer() {
@@ -26,6 +31,8 @@ async function expectRedirect(
 describe('root landing load', () => {
   beforeEach(() => {
     mocks.origin = { id: 'origin' };
+    mocks.ensureSetunariServer.mockReset();
+    mocks.ensureSetunariServer.mockResolvedValue(undefined);
   });
   it('redirects unauthenticated visitors to login before rendering', async () => {
     await expectRedirect('https://chat.example.test/', null, '/login');
@@ -46,6 +53,18 @@ describe('root landing load', () => {
       await expectRedirect(url, null, '/chat/servers');
     }
   );
+
+  // Setunari: the desktop app starts with the company server.
+  it('opens the company server on a host without an origin server', async () => {
+    mocks.origin = undefined;
+    mocks.ensureSetunariServer.mockResolvedValue('setunari-server');
+    await expectRedirect('chatto://desktop/', null, '/chat/setunari-server');
+  });
+
+  it('does not add the company server when the origin is a Chatto server', async () => {
+    await expectRedirect('https://chat.example.test/', null, '/login');
+    expect(mocks.ensureSetunariServer).not.toHaveBeenCalled();
+  });
 
   it('keeps an existing origin server on login when discovery is unavailable', async () => {
     await expectRedirect('https://chat.example.test/', null, '/login');

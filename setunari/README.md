@@ -16,6 +16,10 @@ commit of this branch that production runs).
 | Image build | `setunari/Dockerfile` | Builds frontend + server from source, packaged like `docker/Dockerfile.goreleaser`. |
 | Desktop app | `apps/desktop/build_profile.mjs`, `native/.../CaptureProbe.swift` | Release build is **Setunari Chat** (`mn.setunari.chatto`, data in `Setunari Chat Desktop`), installs next to the official Chatto app; no auto-update. Screen sharing excludes it like the official app. |
 
+| Mac app download | `apps/frontend/src/lib/ui/AppHeader.svelte`, `messages/*/ui.json` (`ui.download_mac_app`) | **Get the Mac app** link in the header for Mac browsers (hidden in the desktop app and on narrow screens) → `https://chat.setunari-group.com/downloads/Setunari-Chat-mac.dmg`. |
+| Default server | `apps/frontend/src/lib/setunari.ts`, `serverCatalogue.ts` (`ensureSetunariServer`), `routes/+page.ts` | A page without its own Chatto origin (the desktop app) starts with `https://chat.setunari-group.com` when no server is registered. |
+| DMG | `apps/desktop/scripts/macos-dmg.mjs` | Packages the release profile (`Setunari Chat`). |
+
 Search for `Setunari` in the source to find each change.
 
 ## Update to a new upstream release

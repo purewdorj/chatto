@@ -12,6 +12,7 @@ import { generateServerId } from '@chatto/client/server/serverIds';
 import { isBackendCapableOrigin } from '@chatto/client/util/runtimeOrigin';
 import { serverRegistry } from '$lib/client';
 import { canonicalServerOrigin } from '$lib/serverUrl';
+import { SETUNARI_SERVER_URL } from '$lib/setunari';
 
 /** Public data that names a server in the catalogue. */
 type ServerProfile = Pick<PublicServerInfo, 'name'> & { iconUrl?: string | null };
@@ -141,4 +142,22 @@ export function firstAuthenticatedServerId(excludedId?: string): string | undefi
   return serverRegistry.servers.find(
     (server) => server.id !== excludedId && serverRegistry.isAuthenticated(server.id)
   )?.id;
+}
+
+/**
+ * Setunari: give a page without its own Chatto origin, such as the desktop app, the
+ * company server when the catalogue is empty. Returns the ID of the company server
+ * when it is registered, or undefined when the catalogue already has other servers
+ * or the server cannot be reached. The server stays signed out until the user signs in.
+ */
+export async function ensureSetunariServer(): Promise<string | undefined> {
+  const existing = findServerByUrl(SETUNARI_SERVER_URL);
+  if (existing) return existing.id;
+  if (serverRegistry.servers.length > 0) return undefined;
+  try {
+    const info = await getPublicServerInfo(SETUNARI_SERVER_URL);
+    return addSignedOutServer(SETUNARI_SERVER_URL, { name: info.name, iconUrl: info.iconUrl });
+  } catch {
+    return undefined;
+  }
 }

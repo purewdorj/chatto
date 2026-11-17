@@ -14,6 +14,7 @@
   import { SERVER_SETTINGS_ROOT_ROUTE } from '$lib/navigation/settingsRoutes';
   import { desktopUpdates, type DesktopUpdates } from '$lib/desktop/updates.svelte';
   import { shortcutKeys } from '$lib/keyboardShortcuts';
+  import { usesAppleShortcutModifier } from '$lib/utils/platformShortcuts';
 
   let { updates = desktopUpdates }: { updates?: DesktopUpdates } = $props();
 
@@ -60,6 +61,11 @@
   const searchShortcut = shortcutKeys({ label: '', key: 'k', command: true, group: 'app' }).join(
     ' '
   );
+
+  // Setunari: offer the company Mac app in Mac browsers. The desktop app itself exposes
+  // `window.chattoDesktop` and never shows the offer.
+  const showMacAppDownload =
+    typeof window !== 'undefined' && !window.chattoDesktop && usesAppleShortcutModifier();
 
   function showAboutChatto() {
     pushState('', { modal: { type: 'aboutChatto' } });
@@ -178,6 +184,17 @@
 
   <!-- Client version and About action -->
   <div class="flex shrink-0 items-center gap-3">
+    {#if showMacAppDownload}
+      <a
+        href="https://chat.setunari-group.com/downloads/Setunari-Chat-mac.dmg"
+        download
+        class="hidden cursor-pointer items-center gap-1.5 link md:inline-flex"
+        data-testid="app-header-mac-app"
+      >
+        <span class="iconify icon-[uil--apple] text-lg" aria-hidden="true"></span>
+        <span>{m('ui.download_mac_app')}</span>
+      </a>
+    {/if}
     {#if updates.status?.status === 'ready'}
       <a
         href={resolve('/chat/preferences/desktop')}
