@@ -177,6 +177,12 @@
         "description": "Até {max} caracteres, visível no seu perfil.",
         "placeholder": "Diga algo breve sobre si",
         "too_long": "O texto pode ter no máximo {max} caracteres."
+      },
+      "position": {
+        "label": "Cargo",
+        "description": "Cargo, até {max} caracteres, visível junto ao nome.",
+        "placeholder": "Por exemplo, diretor comercial",
+        "too_long": "O cargo pode ter no máximo {max} caracteres."
       }
     },
     "preferences": {

@@ -1,7 +1,7 @@
 # FDR-016: Voice Calls
 
 **Status:** Active
-**Last reviewed:** 2026-11-05
+**Last reviewed:** 2026-11-17
 
 ## Overview
 
@@ -200,6 +200,23 @@ Rooms support real-time voice conversations with optional camera video and scree
 - Message author names show a compact call presence icon when the author is in the current room's active call: phone for voice-only participants, video camera when the viewer has joined the LiveKit call and can see an active camera track.
 - A call start appears in the room timeline as a system row naming the member who started it. While that exact call remains active, the row includes a "Join call" action that opens the room's call sidebar. The final leave adds a separate "The active call has ended" row. Individual participant joins and leaves update call indicators and participant lists without adding timeline rows. Explicit user intent is recorded immediately, and LiveKit webhooks/reconciliation confirm or correct the active participant projection.
 - Losing room membership also removes the user from the room's active call. This includes voluntarily leaving the room, being removed by a moderator, being banned, and account-deletion cleanup. The affected client immediately hides that room's call roster and disconnects its local media when the membership change arrives. Chatto records the call leave from the membership transition and best-effort asks LiveKit to disconnect the participant; if that LiveKit removal fails, the room membership change still succeeds and reconciliation can catch up later.
+- A call start in a direct message rings the other members. The ring has a
+  repeating synthesized ringtone and a banner with the caller's name, **Join
+  call**, and **Decline**. A member hears the ring only if they can join the
+  call and are not in a call or connecting to one. The banner shows for all
+  signed-in servers. Do Not Disturb removes the sound but keeps the banner.
+  The ring stops when the call ends, when the member joins the call, when the
+  member declines it, or after 30 seconds. **Decline** is local to the device
+  and does not change the call. **Join call** opens the conversation with the
+  call panel and joins the call. A call start in a channel does not ring,
+  because a channel call is not addressed to each member. A browser blocks
+  page sound until the member clicks or types on the page after it loads. A
+  blocked ringtone starts at the first click or key press while it rings. When
+  the browser blocks the ringtone, or the tab is in the background, a browser
+  system notification also signals the call. The notification uses the
+  operating system's sound and shows only if the member already granted
+  notification permission. Chatto does not ask for permission for it.
+
 - Joined call participants hear fixed synthesized cues from durable participant join/leave events, including their own join/leave events and other participants in the same active call. These call cues are separate from configurable notification sounds and do not use notification sound filters; `CallEndedEvent` does not play a separate cue.
 - The first join starts a call session, creates fresh per-call E2EE key material, and records durable call lifecycle facts. The final leave ends the call, records the end fact, and shreds the call key.
 - Hanging up disconnects from LiveKit and clears the participant from everyone else's view.

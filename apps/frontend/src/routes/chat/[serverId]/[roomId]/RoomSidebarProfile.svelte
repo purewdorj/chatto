@@ -26,6 +26,7 @@ fields as realtime changes arrive.
   import { mapOptionalUserSummary, mapUserPresenceView } from '@chatto/client/api/userSummary';
   import {
     getLiveBio,
+    getLivePosition,
     getLiveCustomStatus,
     getLiveDisplayName,
     getLiveLogin,
@@ -74,6 +75,9 @@ fields as realtime changes arrive.
   );
   const login = $derived(baseUser ? getLiveLogin(baseUser.id, baseUser.login) : '');
   const bio = $derived(baseUser ? getLiveBio(baseUser.id, baseUser.bio ?? null) : null);
+  const position = $derived(
+    baseUser ? getLivePosition(baseUser.id, baseUser.position ?? null) : null
+  );
   const timezone = $derived(
     baseUser ? getLiveTimezone(baseUser.id, baseUser.timezone ?? null) : null
   );
@@ -84,7 +88,9 @@ fields as realtime changes arrive.
   );
   /** The profile user as the avatar and the shared user menu expect it. */
   const menuUser = $derived(
-    baseUser ? { ...baseUser, bio, timezone, presenceStatus: presence, customStatus } : null
+    baseUser
+      ? { ...baseUser, bio, position, timezone, presenceStatus: presence, customStatus }
+      : null
   );
   const profileMenu = new UserMenuState<string>();
 
@@ -115,6 +121,7 @@ fields as realtime changes arrive.
         name={displayName}
         identity={baseUser}
         username={login}
+        {position}
         testId="profile-user-card"
         menu={{
           label: m('chat.profile.open_card', { name: formatAccountName(displayName, baseUser) }),

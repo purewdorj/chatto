@@ -266,6 +266,8 @@
         "unsaved_changes": "יש לך שינויים שלא נשמרו. האם לצאת מהדף ולבטל אותם?",
         "name_title": "שם ותיאור",
         "name_subtitle": "החברים רואים אותם ברשימת החדרים ובראש החדר.",
+        "emoji_choose": "בחר אימוג׳י לערוץ",
+        "emoji_remove": "הסר את האימוג׳י של הערוץ",
         "visibility_title": "נראות",
         "membership_events_title": "פעילות חברים",
         "show_membership_events": "הצגת אירועי הצטרפות ועזיבה",

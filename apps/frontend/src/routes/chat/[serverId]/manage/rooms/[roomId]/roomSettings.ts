@@ -32,16 +32,18 @@ export function applyRoomSettingsResponse(
     ...('threadingMode' in patch && { threadingMode: updated.threadingMode }),
     ...('showMembershipEvents' in patch && {
       showMembershipEvents: updated.showMembershipEvents
-    })
+    }),
+    ...('emoji' in patch && { emoji: updated.emoji })
   };
 }
 
-/** The editable name and description of a room. */
-export type RoomDetailsValues = { name: string; description: string };
+/** The editable name, description, and channel emoji of a room. */
+export type RoomDetailsValues = { name: string; description: string; emoji: string };
 
 /**
- * Builds the name and description patch. It normalizes the name, trims the
- * description, clears an empty description, and omits unchanged fields.
+ * Builds the name, description, and emoji patch. It normalizes the name, trims
+ * the description, clears an empty description, and omits unchanged fields.
+ * An empty emoji clears the channel emoji.
  */
 export function buildRoomDetailsPatch(
   current: RoomDetailsValues,
@@ -52,5 +54,6 @@ export function buildRoomDetailsPatch(
   const description = current.description.trim();
   if (name !== original.name) patch.name = name;
   if (description !== original.description) patch.description = description || null;
+  if (current.emoji !== original.emoji) patch.emoji = current.emoji;
   return patch;
 }

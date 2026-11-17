@@ -266,6 +266,8 @@
         "unsaved_changes": "Hai modifiche non salvate. Vuoi lasciare questa pagina e annullarle?",
         "name_title": "Nome e descrizione",
         "name_subtitle": "I membri li vedono nell’elenco delle stanze e in cima alla stanza.",
+        "emoji_choose": "Scegli l’emoji del canale",
+        "emoji_remove": "Rimuovi l’emoji del canale",
         "visibility_title": "Visibilità",
         "membership_events_title": "Attività dei membri",
         "show_membership_events": "Mostra ingressi e uscite",

@@ -177,6 +177,12 @@
         "description": "Opptil {max} tegn, vises i profilen din.",
         "placeholder": "Fortell litt om deg selv",
         "too_long": "Teksten kan ha maksimalt {max} tegn."
+      },
+      "position": {
+        "label": "Stilling",
+        "description": "Stillingstittel, opptil {max} tegn, vises ved siden av navnet.",
+        "placeholder": "For eksempel salgssjef",
+        "too_long": "Stillingen kan ha maksimalt {max} tegn."
       }
     },
     "preferences": {

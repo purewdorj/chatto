@@ -177,6 +177,12 @@
         "description": "Bis zu {max} Zeichen, sichtbar in deinem Profil.",
         "placeholder": "Erzähle anderen kurz etwas über dich",
         "too_long": "Der Text darf höchstens {max} Zeichen lang sein."
+      },
+      "position": {
+        "label": "Position",
+        "description": "Berufsbezeichnung, bis zu {max} Zeichen, sichtbar neben dem Namen.",
+        "placeholder": "Zum Beispiel Vertriebsleiter",
+        "too_long": "Die Position darf höchstens {max} Zeichen lang sein."
       }
     },
     "preferences": {

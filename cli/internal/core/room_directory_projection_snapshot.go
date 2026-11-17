@@ -34,7 +34,7 @@ func (p *RoomDirectoryProjection) Snapshot() ([]byte, error) {
 			SlowModeSeconds: entry.slowModeSeconds,
 			// Keep the raw enum; runtime reads normalize unknown future values.
 			ThreadingMode: entry.threadingMode, ThreadSlowModeSeconds: entry.threadSlowModeSeconds,
-			ShowMembershipEvents: entry.showMembershipEvents,
+			ShowMembershipEvents: entry.showMembershipEvents, Emoji: entry.emoji,
 			CreatedAt:            entry.createdAt, Purpose: entry.purpose, Notice: snapshotRoomNotice(entry.notice),
 		})
 	}
@@ -86,6 +86,7 @@ func (p *RoomDirectoryProjection) Restore(data []byte) error {
 			archived: room.GetArchived(), universal: room.GetUniversal(), slowModeSeconds: room.GetSlowModeSeconds(),
 			threadingMode:         room.GetThreadingMode(),
 			showMembershipEvents:  room.GetShowMembershipEvents(),
+			emoji:                 room.GetEmoji(),
 			threadSlowModeSeconds: room.ThreadSlowModeSeconds,
 		}
 	}

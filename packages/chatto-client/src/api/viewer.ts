@@ -31,6 +31,8 @@ export type CurrentUser = {
   deleted?: boolean;
   avatarUrl?: string | null;
   bio?: string | null;
+  /** Public position (job title); `null` when unset. */
+  position?: string | null;
   /** Time zone currently exposed on this user's public profile. */
   publicTimezone?: string | null;
   customStatus?: CustomUserStatus | null;
@@ -181,6 +183,7 @@ export function viewerResponseToState(response: GetViewerResponse): ViewerState 
       deleted: user.deleted ?? false,
       avatarUrl: user.avatarUrl ?? null,
       bio: user.bio ?? null,
+      position: user.position || null,
       publicTimezone: user.timezone ?? null,
       customStatus: user.customStatus
         ? {

@@ -41,6 +41,7 @@ vi.mock(
 
 const api = { getMember: vi.fn(), deleteUser: vi.fn() };
 vi.mock('$lib/state/userProfiles.svelte', () => ({
+  getLivePosition: (_userId: string, fallback: string | null) => fallback,
   getLiveBotOwnerUserId: (_id: string, fallback: string | null) => fallback,
   getLiveLogin: (_id: string, login: string) => login,
   getLiveAvatarUrl: (_id: string, avatarUrl: string | null) => avatarUrl,

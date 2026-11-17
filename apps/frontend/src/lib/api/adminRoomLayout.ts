@@ -23,6 +23,8 @@ export type AdminRoomInfo = {
   threadingMode: RoomThreadingMode;
   /** Absent when the server cannot change membership event display. */
   showMembershipEvents?: boolean;
+  /** Channel emoji shown in place of the channel symbol. Empty when unset. */
+  emoji?: string;
 };
 
 export type AdminManagedRoom = AdminRoomInfo & {
@@ -255,7 +257,8 @@ function mapAdminRoom(room: Room): AdminRoomInfo {
     slowModeSeconds: room.slowModeSeconds ?? 0,
     threadSlowModeSeconds: room.threadSlowModeSeconds,
     threadingMode: normalizeRoomThreadingMode(RoomKind.CHANNEL, room.threadingMode),
-    showMembershipEvents: room.showMembershipEvents
+    showMembershipEvents: room.showMembershipEvents,
+    emoji: room.emoji
   };
 }
 

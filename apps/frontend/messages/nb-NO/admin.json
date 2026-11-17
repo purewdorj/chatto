@@ -266,6 +266,8 @@
         "unsaved_changes": "Du har ulagrede endringer. Vil du forlate siden og forkaste dem?",
         "name_title": "Navn og beskrivelse",
         "name_subtitle": "Medlemmer ser dette i romlisten og øverst i rommet.",
+        "emoji_choose": "Velg emoji for kanalen",
+        "emoji_remove": "Fjern emoji for kanalen",
         "visibility_title": "Synlighet",
         "membership_events_title": "Medlemsaktivitet",
         "show_membership_events": "Vis når medlemmer blir med eller forlater",

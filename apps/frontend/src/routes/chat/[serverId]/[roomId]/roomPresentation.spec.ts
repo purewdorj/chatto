@@ -53,6 +53,12 @@ describe('buildRoomPresentation', () => {
     });
   });
 
+  it('shows the channel emoji in place of the channel symbol in the header', () => {
+    const room = roomData();
+    room.room.emoji = '🚀';
+    expect(build(room)).toMatchObject({ title: '🚀 general', pageTitle: '#general' });
+  });
+
   it('omits blank channel descriptions and uses the header title without a space name', () => {
     const room = roomData({
       room: {

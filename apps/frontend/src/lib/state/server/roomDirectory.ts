@@ -11,6 +11,8 @@ export type DirectoryRoom = {
   description?: string | null;
   archived: boolean;
   isUniversal: boolean;
+  /** Channel emoji shown in place of the channel symbol. Empty when unset. */
+  emoji?: string;
   viewerCanJoinRoom: boolean;
   /** Pending invitation from the canonical room projection; cleared when handled or expired. */
   viewerInvitation?: RoomsListItem['viewerInvitation'];
@@ -68,6 +70,7 @@ export class RoomDirectoryStore {
         description: room.description,
         archived: false,
         isUniversal: room.isUniversal,
+        emoji: room.emoji,
         viewerCanJoinRoom: room.viewerCanJoinRoom,
         viewerInvitation: room.viewerInvitation
       }));

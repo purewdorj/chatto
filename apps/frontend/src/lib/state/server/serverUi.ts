@@ -2,7 +2,8 @@
  * Frontend state of one server that the Chatto client does not own: the
  * voice call, read views and notification attention, sidebar navigation,
  * optimistic unread and membership state, pending highlights, message search
- * sessions, draft reply targets, and the admin room-layout editor.
+ * sessions, draft reply targets, the incoming-call ring, and the admin
+ * room-layout editor.
  *
  * `serverUi(store)` returns the state of one server store. It lives as long as
  * the store: a new store, for example after an account change, gets new
@@ -19,6 +20,7 @@ import { createMemberDirectoryAPI } from '@chatto/client/api/memberDirectory';
 import { createMessageSearchAPI, type MessageSearchAPI } from '@chatto/client/api/messageSearch';
 import { createRoomCommandAPI } from '@chatto/client/api/rooms';
 import { createVoiceCallAPI } from '@chatto/client/api/voiceCalls';
+import { RoomKind } from '@chatto/client/api/roomDirectory';
 import type { RealtimeEvent } from '@chatto/client';
 import type { ServerStateStore } from '@chatto/client/server/store';
 import { ActiveCallRoomsState } from './activeCallRooms';
@@ -34,6 +36,7 @@ import { MessageSearchStore } from './messageSearch';
 import { PendingHighlightStore } from './pendingHighlight';
 import { VoiceCallState } from './voiceCall.svelte';
 import { DraftReplies } from './draftReplies';
+import { IncomingCallState } from './incomingCall.svelte';
 
 /**
  * What the server icon shows: `notification` for an occurrence that needs
@@ -79,6 +82,8 @@ export class ServerUi {
   readonly voiceCall: VoiceCallState;
   /** Active calls from the projection, with this client's own call overlaid. */
   readonly activeCallRooms: ActiveCallRoomsState;
+  /** The direct-message call that rings the viewer. */
+  readonly incomingCall: IncomingCallState;
   /** Panes that the user reads now; they need no notification attention. */
   readonly readViews = new ReadViewRegistry();
   /** Notifications that need attention, without viewed ones. */
@@ -113,6 +118,14 @@ export class ServerUi {
       () => this.voiceCall,
       () => store.projection.activeCalls
     );
+    // Ring only for direct messages: a channel call is not addressed to the viewer.
+    this.incomingCall = new IncomingCallState(
+      (roomId) =>
+        store.projection.rooms.get(roomId)?.room?.kind === RoomKind.DM &&
+        callPermissions(store, roomId).join &&
+        !this.voiceCall.connected &&
+        !this.voiceCall.connecting
+    );
     this.attention = new NotificationAttention(store.notifications, this.readViews);
     this.navigation = new NavigationStore(store.roomList, () => this.attention.counts);
     this.roomUnread = new RoomUnreadStore(() => store.projection);
@@ -133,7 +146,9 @@ export class ServerUi {
       // Navigation targets contain no cached message content. Keep an unfinished
       // jump through snapshot recovery, but never across a viewer privacy reset.
       if (privacy) this.pendingHighlights.clear();
+      if (privacy) this.incomingCall.clear();
       if (retainView) return;
+      this.incomingCall.clear();
       this.voiceCall.handleProjectionReset();
       this.roomDirectory.resetOptimisticState();
       this.roomUnread.clear();
@@ -147,7 +162,10 @@ export class ServerUi {
       this.draftReplies.clearRoom(roomId);
       const highlight = this.pendingHighlights.current;
       if (highlight?.roomId === roomId) this.pendingHighlights.complete(highlight);
-      if (!messagesOnly) this.voiceCall.handleRoomAccessRevoked(roomId);
+      if (!messagesOnly) {
+        this.voiceCall.handleRoomAccessRevoked(roomId);
+        this.incomingCall.handleRoomAccessLost(roomId);
+      }
       if (removed) {
         this.roomDirectory.removeMembershipProjection(roomId);
         this.roomUnread.removeRoomProjection(roomId);
@@ -161,6 +179,7 @@ export class ServerUi {
     });
     store.onSessionEnded(() => {
       this.draftReplies.clear();
+      this.incomingCall.clear();
       this.messageSearch.availability.reset();
     });
     store.onPermissionsChanged(() => {
@@ -200,6 +219,7 @@ export class ServerUi {
       this.draftReplies.clear();
       // Release call media first; nothing waits for the server.
       this.voiceCall.dispose();
+      this.incomingCall.clear();
       this.readViews.clear();
       this.roomUnread.clear();
       this.adminRoomLayout.deactivateProjectionRefresh();
@@ -261,23 +281,36 @@ export class ServerUi {
     return null;
   }
 
-  /** Forward call participant and end events to the voice call. */
+  /** Forward call events to the voice call and the incoming-call ring. */
   #handleCallEvent(event: RealtimeEvent | null): void {
     const payload = event?.event;
     if (!event || !payload) return;
+    const viewerId = this.#store.projectionViewerId ?? this.#store.viewerId;
     switch (payload.case) {
+      case 'voiceCallStarted':
+        this.incomingCall.handleCallStarted({
+          roomId: payload.value.roomId,
+          callId: payload.value.callId || null,
+          callerId: event.actorId || null,
+          viewerId
+        });
+        return;
       case 'voiceCallParticipantJoined':
       case 'voiceCallParticipantLeft':
+        if (payload.case === 'voiceCallParticipantJoined' && event.actorId === viewerId) {
+          this.incomingCall.handleViewerJoined(payload.value.roomId);
+        }
         this.voiceCall.handleParticipantTransition({
           eventId: event.id,
           kind: payload.case === 'voiceCallParticipantJoined' ? 'join' : 'leave',
           roomId: payload.value.roomId,
           callId: payload.value.callId || null,
           actorId: event.actorId || null,
-          viewerId: this.#store.projectionViewerId ?? this.#store.viewerId
+          viewerId
         });
         return;
       case 'voiceCallEnded':
+        this.incomingCall.handleCallEnded(payload.value.roomId, payload.value.callId || null);
         this.voiceCall.handleCallEndedEvent(payload.value.roomId, payload.value.callId || null);
         return;
     }

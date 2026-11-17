@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/chattocorp/chatto/cli/internal/evtstream"
+
+	"github.com/stretchr/testify/require"
 )
 
 // TestChattoCore_CreateUser_DisplayNameTooLong tests that oversized display names are rejected.
@@ -639,7 +641,7 @@ func TestChattoCore_AdminUpdateUserAuthorization(t *testing.T) {
 			t.Fatalf("CreateUser target: %v", err)
 		}
 		login := "adminauth-renamed"
-		_, err = c.UpdateManagedUserProfile(ctx, "", target.Id, &login, nil, nil)
+		_, err = c.UpdateManagedUserProfile(ctx, "", target.Id, &login, nil, nil, nil)
 		if !errors.Is(err, ErrNotAuthenticated) {
 			t.Fatalf("UpdateManagedUserProfile err = %v, want ErrNotAuthenticated", err)
 		}
@@ -660,7 +662,7 @@ func TestChattoCore_AdminUpdateUserAuthorization(t *testing.T) {
 			t.Fatalf("CreateUser target: %v", err)
 		}
 		login := "adminauth-denied"
-		_, err = c.UpdateManagedUserProfile(ctx, regular.Id, target.Id, &login, nil, nil)
+		_, err = c.UpdateManagedUserProfile(ctx, regular.Id, target.Id, &login, nil, nil, nil)
 		if !errors.Is(err, ErrPermissionDenied) {
 			t.Fatalf("UpdateManagedUserProfile err = %v, want ErrPermissionDenied", err)
 		}
@@ -689,7 +691,7 @@ func TestChattoCore_AdminUpdateUserAuthorization(t *testing.T) {
 		login := "adminauth-updated"
 		displayName := "Admin Updated"
 		bio := "Updated by an admin."
-		updated, err := c.UpdateManagedUserProfile(ctx, admin.Id, target.Id, &login, &displayName, &bio)
+		updated, err := c.UpdateManagedUserProfile(ctx, admin.Id, target.Id, &login, &displayName, &bio, nil)
 		if err != nil {
 			t.Fatalf("UpdateManagedUserProfile: %v", err)
 		}
@@ -794,7 +796,7 @@ func TestChattoCore_AdminUpdateUserAuthorization(t *testing.T) {
 		if err := c.AdminClearLoginChangeCooldown(ctx, user.Id, user.Id); !errors.Is(err, ErrPermissionDenied) {
 			t.Fatalf("AdminClearLoginChangeCooldown self err = %v, want ErrPermissionDenied", err)
 		}
-		updated, err := c.UpdateManagedUserProfile(ctx, user.Id, user.Id, &login, nil, nil)
+		updated, err := c.UpdateManagedUserProfile(ctx, user.Id, user.Id, &login, nil, nil, nil)
 		if err != nil {
 			t.Fatalf("UpdateManagedUserProfile self: %v", err)
 		}
@@ -802,7 +804,7 @@ func TestChattoCore_AdminUpdateUserAuthorization(t *testing.T) {
 			t.Fatalf("updated login = %q, want %q", updated.GetLogin(), login)
 		}
 		secondLogin := "adminauth-self-again"
-		if _, err := c.UpdateManagedUserProfile(ctx, user.Id, user.Id, &secondLogin, nil, nil); !errors.Is(err, ErrLoginChangeCooldown) {
+		if _, err := c.UpdateManagedUserProfile(ctx, user.Id, user.Id, &secondLogin, nil, nil, nil); !errors.Is(err, ErrLoginChangeCooldown) {
 			t.Fatalf("second self login change err = %v, want ErrLoginChangeCooldown", err)
 		}
 	})
@@ -972,4 +974,57 @@ func TestChattoCore_UpdateUserBio(t *testing.T) {
 	if n := bioEvents(); n != 3 {
 		t.Fatalf("bio events after clear = %d, want 3", n)
 	}
+}
+
+func TestChattoCore_UpdateUserPosition(t *testing.T) {
+	c, _ := setupTestCore(t)
+	ctx := testContext(t)
+
+	user, err := c.CreateUser(ctx, SystemActorID, "positionuser", "Position User", "password123")
+	require.NoError(t, err)
+	positionEvents := func() int {
+		events, _, err := c.EventPublisher.SubjectEvents(ctx, evtstream.UserAggregate(user.Id).Subject(evtstream.EventUserPositionChanged))
+		require.NoError(t, err)
+		return len(events)
+	}
+
+	// A self-update normalizes whitespace to a single line.
+	updated, err := c.UpdateOwnUserProfile(ctx, user.Id, nil, nil, nil, new("  Senior\n  Sales   Manager "))
+	require.NoError(t, err)
+	require.Equal(t, "Senior Sales Manager", updated.GetPosition())
+	got, err := c.GetUser(ctx, user.Id)
+	require.NoError(t, err)
+	require.Equal(t, "Senior Sales Manager", got.GetPosition())
+	require.Equal(t, 1, positionEvents())
+
+	// An unchanged position appends no event.
+	_, err = c.UpdateOwnUserProfile(ctx, user.Id, nil, nil, nil, new("Senior Sales Manager"))
+	require.NoError(t, err)
+	require.Equal(t, 1, positionEvents())
+
+	_, err = c.UpdateOwnUserProfile(ctx, user.Id, nil, nil, nil, new(strings.Repeat("x", MaxPositionLength)))
+	require.NoError(t, err)
+	_, err = c.UpdateOwnUserProfile(ctx, user.Id, nil, nil, nil, new(strings.Repeat("x", MaxPositionLength+1)))
+	require.ErrorIs(t, err, ErrPositionTooLong)
+
+	// An account manager can set another user's position.
+	admin, err := c.CreateUser(ctx, SystemActorID, "positionadmin", "Position Admin", "password123")
+	require.NoError(t, err)
+	require.NoError(t, c.GrantUserPermission(ctx, SystemActorID, admin.Id, PermUserManageAccounts))
+	updated, err = c.UpdateManagedUserProfile(ctx, admin.Id, user.Id, nil, nil, nil, new("Head of Sales"))
+	require.NoError(t, err)
+	require.Equal(t, "Head of Sales", updated.GetPosition())
+
+	// A regular user cannot set another user's position.
+	regular, err := c.CreateUser(ctx, SystemActorID, "positionregular", "Position Regular", "password123")
+	require.NoError(t, err)
+	_, err = c.UpdateManagedUserProfile(ctx, regular.Id, user.Id, nil, nil, nil, new("Intern"))
+	require.ErrorIs(t, err, ErrPermissionDenied)
+
+	cleared, err := c.UpdateOwnUserProfile(ctx, user.Id, nil, nil, nil, new("   "))
+	require.NoError(t, err)
+	require.Empty(t, cleared.GetPosition())
+	got, err = c.GetUser(ctx, user.Id)
+	require.NoError(t, err)
+	require.Empty(t, got.GetPosition())
 }

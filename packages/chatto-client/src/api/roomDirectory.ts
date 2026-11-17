@@ -39,6 +39,8 @@ export type DirectoryRoomSummary = {
   threadingMode: RoomThreadingMode;
   /** Absent on older servers; clients then show join/leave activity. */
   showMembershipEvents?: boolean;
+  /** Channel emoji shown in place of the channel symbol. Empty when unset. */
+  emoji: string;
   slowModeNextPostAt: string | null;
   isMember: boolean;
   hasUnread: boolean;
@@ -228,6 +230,7 @@ export function mapDirectoryRoom(entry: RoomWithViewerState): DirectoryRoomSumma
     threadSlowModeSeconds: entry.room.threadSlowModeSeconds,
     threadingMode: normalizeRoomThreadingMode(entry.room.kind, entry.room.threadingMode),
     showMembershipEvents: entry.room.showMembershipEvents,
+    emoji: entry.room.emoji,
     slowModeNextPostAt: entry.viewerState?.slowModeNextPostAt?.toDate().toISOString() ?? null,
     isMember: entry.viewerState?.isMember ?? false,
     hasUnread: entry.viewerState?.hasUnread ?? false,

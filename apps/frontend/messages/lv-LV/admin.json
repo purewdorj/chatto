@@ -266,6 +266,8 @@
         "unsaved_changes": "Jums ir nesaglabātas izmaiņas. Vai atstāt šo lapu un tās atmest?",
         "name_title": "Nosaukums un apraksts",
         "name_subtitle": "Dalībnieki tos redz istabu sarakstā un istabas augšdaļā.",
+        "emoji_choose": "Izvēlieties kanāla emocijzīmi",
+        "emoji_remove": "Noņemiet kanāla emocijzīmi",
         "visibility_title": "Redzamība",
         "membership_events_title": "Dalībnieku aktivitāte",
         "show_membership_events": "Rādīt pievienošanās un aiziešanas notikumus",

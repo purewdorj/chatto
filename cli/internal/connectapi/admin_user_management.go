@@ -297,6 +297,9 @@ func adminMemberUserWithPresence(member core.AdminMember, presence string) *apiv
 	if member.Bio != "" {
 		summary.Bio = new(member.Bio)
 	}
+	if member.Position != "" {
+		summary.Position = new(member.Position)
+	}
 	if member.SharedTimezone != "" {
 		summary.Timezone = new(member.SharedTimezone)
 	}

@@ -695,9 +695,10 @@ mask stay unchanged.
 | `universal` | `optional bool` | New universal membership state, when changing it. Direct-message rooms cannot be universal. |
 | `slow_mode_seconds` | `optional uint32` | New per-user root posting interval in seconds. Zero disables slow mode. The maximum supported interval is six hours. Direct-message rooms cannot use slow mode. |
 | `threading_mode` | optional [`RoomThreadingMode`](#chatto-api-v1-RoomThreadingMode) | New threading policy. Direct-message rooms cannot set this field, and an explicitly supplied UNSPECIFIED or unknown value is rejected. |
-| `update_mask` | `google.protobuf.FieldMask` | Editable fields to apply or reset: name, description, universal, slow_mode_seconds, threading_mode, thread_slow_mode_seconds, show_membership_events. Omit to infer populated fields; * selects all editable fields. An explicit empty mask is invalid. Unselected values are ignored. Selected absent values reset the field to its default, subject to field validation. |
+| `update_mask` | `google.protobuf.FieldMask` | Editable fields to apply or reset: name, description, universal, slow_mode_seconds, threading_mode, thread_slow_mode_seconds, show_membership_events, emoji. Omit to infer populated fields; * selects all editable fields. An explicit empty mask is invalid. Unselected values are ignored. Selected absent values reset the field to its default, subject to field validation. |
 | `thread_slow_mode_seconds` | `optional uint32` | Per-user interval within each thread. The root starts its author's timer. Zero disables it. Updating this field does not change the root interval. |
 | `show_membership_events` | `optional bool` | Whether clients show join/leave activity in this channel's history and live timeline. Requires room.manage. Selecting an absent value resets to true. |
+| `emoji` | `optional string` | New channel emoji: one complete Unicode emoji, such as "🚀". Empty clears the emoji. Requires room.manage. Direct-message rooms cannot set it. |
 
 
 <a id="chatto-api-v1-UpdateRoomResponse"></a>
@@ -4744,7 +4745,7 @@ Batch user directory response.
 
 ### UpdateUserProfile
 
-Updates the target user's login, display name, and/or bio. Users can
+Updates the target user's login, display name, bio, and/or position. Users can
 update themselves. Updating another human requires user.manage-accounts.
 A caller who updates another bot needs ownership of the bot,
 user.manage-accounts, or bot.manage. Bot callers use the same permission checks.
@@ -4773,7 +4774,8 @@ to apply or reset. Fields outside the mask stay unchanged.
 | `display_name` | `optional string` | New non-empty display name. The server also rejects control and confusing invisible characters. |
 | `login` | `optional string` | New login identifier, when changing it. The server accepts ASCII letters, digits, period, underscore, and hyphen, starting with a letter or digit. |
 | `bio` | `optional string` | New Markdown biography, when changing it. Empty clears the bio. |
-| `update_mask` | `google.protobuf.FieldMask` | Editable fields to apply or reset: display_name, login, bio. Omit to infer populated fields; * selects all editable fields. An explicit empty mask is invalid. Unselected values are ignored. Selected absent values reset the field to its default, subject to field validation. |
+| `position` | `optional string` | New plain-text position (job title), when changing it. Empty clears the position. |
+| `update_mask` | `google.protobuf.FieldMask` | Editable fields to apply or reset: display_name, login, bio, position. Omit to infer populated fields; * selects all editable fields. An explicit empty mask is invalid. Unselected values are ignored. Selected absent values reset the field to its default, subject to field validation. |
 
 
 <a id="chatto-api-v1-UpdateUserProfileResponse"></a>
@@ -5276,6 +5278,7 @@ Public user fields.
 | `timezone` | `optional string` | IANA time zone the user chose to share on their profile (for example "Europe/Berlin"). Absent means the user has not enabled time-zone sharing or has no stored time zone. |
 | `bot` | [`BotInfo`](#chatto-api-v1-BotInfo) | Present for a bot identity; absent for humans and deleted-account references. |
 | `deactivated` | `bool` | True while the account cannot use this server. Data is retained and access can be restored. |
+| `position` | `optional string` | Plain-text position (job title) shown next to the user's name, when set. |
 
 
 
@@ -5949,6 +5952,7 @@ Public room metadata returned by room commands.
 | `thread_slow_mode_seconds` | `optional uint32` | Per-user interval within each thread, including its root. Zero disables the interval. Absent on servers without independent thread slow mode. |
 | `created_at` | `google.protobuf.Timestamp` | When the room was created. Absent when unavailable on an older server. |
 | `show_membership_events` | `optional bool` | Whether clients show room join/leave activity. Absence on older servers means true. Membership state and event delivery are not affected. |
+| `emoji` | `string` | Channel emoji that clients show in place of the channel symbol. Empty when the channel has no emoji. Direct-message rooms always leave it empty. |
 
 
 

@@ -118,7 +118,8 @@ describe('createRoomCommandAPI', () => {
       groupId: 'group-1',
       universal: true,
       slowModeSeconds: 0,
-      threadingMode: RoomThreadingMode.REQUIRED
+      threadingMode: RoomThreadingMode.REQUIRED,
+      emoji: ''
     });
   });
 
@@ -154,7 +155,8 @@ describe('createRoomCommandAPI', () => {
       groupId: 'group-1',
       universal: true,
       slowModeSeconds: 0,
-      threadingMode: RoomThreadingMode.ENCOURAGED
+      threadingMode: RoomThreadingMode.ENCOURAGED,
+      emoji: ''
     });
 
     expect(receivedRequest(mocks.updateRoom)).toMatchObject({
@@ -189,6 +191,21 @@ describe('createRoomCommandAPI', () => {
     expect(
       (await roomAPI().updateRoom({ roomId: 'room-1', name: 'general' }))?.showMembershipEvents
     ).toBeUndefined();
+  });
+
+  it('sets and clears the channel emoji with a sparse mask', async () => {
+    mocks.updateRoom.mockReturnValue({ room: { id: 'room-1', emoji: '🚀' } });
+    expect((await roomAPI().updateRoom({ roomId: 'room-1', emoji: '🚀' }))?.emoji).toBe('🚀');
+    expect(receivedRequest(mocks.updateRoom)).toMatchObject({
+      emoji: '🚀',
+      updateMask: { paths: ['emoji'] }
+    });
+    mocks.updateRoom.mockReturnValue({ room: { id: 'room-1', emoji: '' } });
+    expect((await roomAPI().updateRoom({ roomId: 'room-1', emoji: '' }))?.emoji).toBe('');
+    expect(receivedRequest(mocks.updateRoom, 1)).toMatchObject({
+      emoji: '',
+      updateMask: { paths: ['emoji'] }
+    });
   });
 
   it('uses Connect room and directory membership commands', async () => {
@@ -360,7 +377,8 @@ describe('createRoomCommandAPI', () => {
             groupId: 'group-1',
             universal: false,
             slowModeSeconds: 0,
-            threadingMode: RoomThreadingMode.ENABLED
+            threadingMode: RoomThreadingMode.ENABLED,
+            emoji: ''
           },
           userId: 'user-1',
           user: {
@@ -370,6 +388,7 @@ describe('createRoomCommandAPI', () => {
             deleted: false,
             avatarUrl: 'https://cdn/avatar.webp',
             bio: null,
+            position: null,
             timezone: null,
             presenceStatus: PresenceStatus.AWAY,
             customStatus: null,
@@ -385,6 +404,7 @@ describe('createRoomCommandAPI', () => {
             deleted: false,
             avatarUrl: null,
             bio: null,
+            position: null,
             timezone: null,
             presenceStatus: PresenceStatus.OFFLINE,
             customStatus: null,

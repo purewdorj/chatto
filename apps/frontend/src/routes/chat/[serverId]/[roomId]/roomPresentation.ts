@@ -30,7 +30,8 @@ export function buildRoomPresentation({
   }
 
   if (!isDM) {
-    const title = `# ${roomData.room.name}`;
+    // A channel emoji replaces the channel symbol, as in the room list.
+    const title = `${roomData.room.emoji || '#'} ${roomData.room.name}`;
     const description = roomData.room.description?.trim() || undefined;
     const pageTitle = `#${roomData.room.name}`;
     return { title, description, pageTitle };

@@ -83,7 +83,7 @@ func TestCompoundRoomUpdateRetriesAcrossReplicas(t *testing.T) {
 			second := startReplica(t, ns, first.config)
 			input := RoomUpdateInput{ActorID: actor.Id, RoomID: room.Id, Description: new("after"),
 				Universal: new(true), SlowModeSeconds: proto.Uint32(30),
-				ShowMembershipEvents: new(false),
+				ShowMembershipEvents: new(false), Emoji: new("🚀"),
 				ThreadingMode:        evtv1.RoomThreadingMode_ROOM_THREADING_MODE_REQUIRED.Enum()}
 			if scenario == "name-collision" {
 				input.Name = new("claimed")
@@ -117,8 +117,9 @@ func TestCompoundRoomUpdateRetriesAcrossReplicas(t *testing.T) {
 				require.EqualValues(t, 30, updated.SlowModeSeconds)
 				require.Equal(t, *input.ThreadingMode, updated.ThreadingMode)
 				require.False(t, updated.ShowMembershipEvents)
+				require.Equal(t, "🚀", updated.Emoji)
 				var previous uint64
-				for _, eventType := range []string{evtstream.EventRoomUpdated, evtstream.EventRoomUniversalChanged, evtstream.EventRoomSlowModeChanged, evtstream.EventRoomThreadingModeChanged, evtstream.EventRoomMembershipEventsVisibilityChanged} {
+				for _, eventType := range []string{evtstream.EventRoomUpdated, evtstream.EventRoomUniversalChanged, evtstream.EventRoomSlowModeChanged, evtstream.EventRoomThreadingModeChanged, evtstream.EventRoomMembershipEventsVisibilityChanged, evtstream.EventRoomEmojiChanged} {
 					seq, err := first.EventPublisher.LastSubjectSeq(ctx, evtstream.RoomAggregate(room.Id).Subject(eventType))
 					require.NoError(t, err)
 					if previous != 0 {

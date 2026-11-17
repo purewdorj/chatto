@@ -115,7 +115,8 @@ function ban(
       groupId: '',
       universal: false,
       slowModeSeconds: 0,
-      threadingMode: RoomThreadingMode.ENABLED
+      threadingMode: RoomThreadingMode.ENABLED,
+      emoji: ''
     },
     userId: `user-${id}`,
     user,

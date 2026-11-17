@@ -55,6 +55,8 @@ func roomIDOfEvent(event *evtv1.Event) string {
 		return e.RoomThreadingModeChanged.GetRoomId()
 	case *evtv1.Event_RoomMembershipEventsVisibilityChanged:
 		return e.RoomMembershipEventsVisibilityChanged.GetRoomId()
+	case *evtv1.Event_RoomEmojiChanged:
+		return e.RoomEmojiChanged.GetRoomId()
 	case *evtv1.Event_UserJoinedRoom:
 		return e.UserJoinedRoom.GetRoomId()
 	case *evtv1.Event_UserLeftRoom:
@@ -141,6 +143,8 @@ func userIDOfUserEvent(event *evtv1.Event) string {
 		return payload.UserCustomStatusCleared.GetUserId()
 	case *evtv1.Event_UserBioChanged:
 		return payload.UserBioChanged.GetUserId()
+	case *evtv1.Event_UserPositionChanged:
+		return payload.UserPositionChanged.GetUserId()
 	case *evtv1.Event_UserServerPreferencesChanged:
 		return payload.UserServerPreferencesChanged.GetUserId()
 	case *evtv1.Event_AssetCreated:
@@ -172,6 +176,8 @@ func UserIDOfPublicProfileEvent(event *evtv1.Event) string {
 		return payload.UserCustomStatusCleared.GetUserId()
 	case *evtv1.Event_UserBioChanged:
 		return payload.UserBioChanged.GetUserId()
+	case *evtv1.Event_UserPositionChanged:
+		return payload.UserPositionChanged.GetUserId()
 	case *evtv1.Event_AssetCreated:
 		return payload.AssetCreated.GetUserId()
 	default:
@@ -391,6 +397,7 @@ func isVisibleRoomTimelineEntry(event *evtv1.Event) bool {
 		*evtv1.Event_RoomUniversalChanged,
 		*evtv1.Event_RoomSlowModeChanged,
 		*evtv1.Event_RoomMembershipEventsVisibilityChanged,
+		*evtv1.Event_RoomEmojiChanged,
 		*evtv1.Event_RoomMemberBanned, *evtv1.Event_RoomMemberUnbanned,
 		*evtv1.Event_RoomMemberAdded, *evtv1.Event_RoomMemberRemoved,
 		*evtv1.Event_AssetCreated, *evtv1.Event_AssetDeleted, *evtv1.Event_AssetAttached,
@@ -432,6 +439,7 @@ func isDeliverableLiveEVTRoomEventType(eventType string) bool {
 		evtstream.EventRoomSlowModeChanged,
 		evtstream.EventRoomThreadingModeChanged,
 		evtstream.EventRoomMembershipEventsVisibilityChanged,
+		evtstream.EventRoomEmojiChanged,
 		evtstream.EventUserJoinedRoom,
 		evtstream.EventUserLeftRoom,
 		evtstream.EventRoomMemberUnbanned,
@@ -513,6 +521,7 @@ func isDeliverableLiveEVTUserEventType(eventType string) bool {
 		evtstream.EventUserLoginChanged,
 		evtstream.EventUserDisplayNameChanged,
 		evtstream.EventUserBioChanged,
+		evtstream.EventUserPositionChanged,
 		evtstream.EventUserAvatarSet,
 		evtstream.EventUserAvatarCleared,
 		evtstream.EventAssetCreated,
@@ -626,7 +635,8 @@ func eventNeedsRoomDirectoryProjection(event *evtv1.Event) bool {
 		*evtv1.Event_RoomSlowModeChanged,
 		*evtv1.Event_RoomThreadingModeChanged,
 		*evtv1.Event_RoomDeleted,
-		*evtv1.Event_RoomMembershipEventsVisibilityChanged:
+		*evtv1.Event_RoomMembershipEventsVisibilityChanged,
+		*evtv1.Event_RoomEmojiChanged:
 		return true
 	default:
 		return false

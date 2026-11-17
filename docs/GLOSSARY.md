@@ -48,6 +48,8 @@ Names for visible surfaces and component groupings. When a name here disagrees w
 
 **About** — Public Markdown text on a human or bot account's profile. The API field is `bio`. See [FDR-022](fdr/FDR-022-user-profile.md).
 
+**Position** — Public plain-text job title on an account's profile, for example "Sales Manager". The client shows it next to the name. The API field is `position`. See [FDR-022](fdr/FDR-022-user-profile.md).
+
 **Profile Card** — Compact user profile shown in a popover on pointer devices or a bottom sheet on touch devices. It contains public identity details and relevant actions. See [FDR-022](fdr/FDR-022-user-profile.md).
 
 **Role Badge** — Compact label that identifies one of a user's assigned roles. A server operator selects which roles provide badges. See [FDR-001](fdr/FDR-001-roles-and-permissions.md) and [FDR-022](fdr/FDR-022-user-profile.md).

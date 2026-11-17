@@ -13,6 +13,8 @@ export type RoomData = {
     /** Creation provenance, when reported by the server. */
     createdAt?: string | null;
     isUniversal: boolean;
+    /** Channel emoji shown in place of the channel symbol. Empty when unset. */
+    emoji?: string;
     slowModeSeconds: number;
     threadSlowModeSeconds?: number;
     threadingMode: RoomThreadingMode;
@@ -77,6 +79,7 @@ export function useRoomData(getProps: () => { roomId: string }) {
         createdAt: room.createdAt,
         type: roomKindOrChannel(room.kind ?? RoomKind.CHANNEL),
         isUniversal: room.isUniversal,
+        emoji: room.emoji,
         slowModeSeconds: room.slowModeSeconds,
         threadSlowModeSeconds: room.threadSlowModeSeconds,
         threadingMode: room.threadingMode,

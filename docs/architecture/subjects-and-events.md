@@ -259,6 +259,11 @@ cursors are trusted integration coordinates and are not public API cursors.
 other selected room settings. The room catalog projects it; timeline history
 does not include the setting-change fact. Membership facts remain available.
 
+`evt.room.{roomId}.room_emoji_changed` stores `RoomEmojiChangedEvent`. It
+contains the complete channel emoji; an empty value clears it. The room command
+commits it with other selected room settings. The room catalog projects it, and
+timeline history does not include it.
+
 | Subject pattern                                 | Protobuf event message                                                                                                                                        |
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `evt.room.{roomId}.room_created`                | `RoomCreatedEvent`                                                                                                                                            |
@@ -268,6 +273,7 @@ does not include the setting-change fact. Membership facts remain available.
 | `evt.room.{roomId}.room_universal_changed`      | `RoomUniversalChangedEvent`                                                                                                                                   |
 | `evt.room.{roomId}.room_slow_mode_changed`      | `RoomSlowModeChangedEvent`                                                                                                                                    |
 | `evt.room.{roomId}.room_threading_mode_changed` | `RoomThreadingModeChangedEvent`                                                                                                                               |
+| `evt.room.{roomId}.room_emoji_changed`          | `RoomEmojiChangedEvent`                                                                                                                                       |
 | `evt.room.{roomId}.room_notice_changed`         | `RoomNoticeChangedEvent`: current Markdown and an announcement flag; the envelope supplies publication identity and time, and an empty body clears the notice |
 | `evt.room.{roomId}.room_deleted`                | `RoomDeletedEvent`                                                                                                                                            |
 | `evt.room.{roomId}.user_joined`                 | `UserJoinedRoomEvent`                                                                                                                                         |
@@ -370,6 +376,7 @@ reaction projection and read behavior.
 | `evt.user.{userId}.login_changed` | `UserLoginChangedEvent` |
 | `evt.user.{userId}.display_name_changed` | `UserDisplayNameChangedEvent` |
 | `evt.user.{userId}.bio_changed` | `UserBioChangedEvent`; encrypted PII bio text (empty payload clears the bio) |
+| `evt.user.{userId}.position_changed` | `UserPositionChangedEvent`; encrypted PII position (job title) text (empty payload clears the position) |
 | `evt.user.{userId}.avatar_set` | `UserAvatarSetEvent` |
 | `evt.user.{userId}.avatar_cleared` | `UserAvatarClearedEvent` |
 | `evt.user.{userId}.custom_status_set` | `UserCustomStatusSetEvent` |

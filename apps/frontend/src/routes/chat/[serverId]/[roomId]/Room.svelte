@@ -356,6 +356,7 @@
     livekitUrl: serverInfo.livekitUrl ?? undefined,
     canBanRoomMembers: canBanMembersFromRoomSidebar(room.isDM, room.roomData?.canBanRoomMembers),
     isUniversal: room.roomData?.room.isUniversal ?? false,
+    roomEmoji: room.roomData?.room.emoji ?? '',
     currentUserId: stores.viewerId,
     membersStore: roomMembersStore,
     onOpenProfile: (userId: string) => appUi.openMemberProfile(userId),

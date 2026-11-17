@@ -329,7 +329,15 @@ export class UpdateUserProfileRequest extends Message<UpdateUserProfileRequest> 
   bio?: string;
 
   /**
-   * Editable fields to apply or reset: display_name, login, bio.
+   * New plain-text position (job title), when changing it. Empty clears the
+   * position.
+   *
+   * @generated from field: optional string position = 6;
+   */
+  position?: string;
+
+  /**
+   * Editable fields to apply or reset: display_name, login, bio, position.
    * Omit to infer populated fields; * selects all editable fields. An explicit
    * empty mask is invalid. Unselected values are ignored. Selected absent values
    * reset the field to its default, subject to field validation.
@@ -350,6 +358,7 @@ export class UpdateUserProfileRequest extends Message<UpdateUserProfileRequest> 
     { no: 2, name: "display_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "login", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "bio", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "position", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "update_mask", kind: "message", T: FieldMask },
   ]);
 

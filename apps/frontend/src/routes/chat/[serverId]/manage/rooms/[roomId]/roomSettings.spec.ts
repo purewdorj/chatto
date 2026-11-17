@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { buildRoomDetailsPatch, type RoomDetailsValues } from './roomSettings';
 
-const original: RoomDetailsValues = { name: 'general', description: 'General discussion' };
+const original: RoomDetailsValues = {
+  name: 'general',
+  description: 'General discussion',
+  emoji: ''
+};
 
 describe('buildRoomDetailsPatch', () => {
   it('omits the description from a name-only update', () => {
@@ -21,5 +25,12 @@ describe('buildRoomDetailsPatch', () => {
       name: 'Küche'
     });
     expect(buildRoomDetailsPatch({ ...original }, original)).toEqual({});
+  });
+
+  it('sends a changed emoji and an empty emoji to clear it', () => {
+    expect(buildRoomDetailsPatch({ ...original, emoji: '🚀' }, original)).toEqual({ emoji: '🚀' });
+    expect(buildRoomDetailsPatch({ ...original, emoji: '' }, { ...original, emoji: '🚀' })).toEqual(
+      { emoji: '' }
+    );
   });
 });

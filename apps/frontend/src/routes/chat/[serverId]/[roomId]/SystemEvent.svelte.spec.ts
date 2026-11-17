@@ -8,6 +8,7 @@ import SystemEvent from './SystemEvent.svelte';
 import { RoomThreadingMode } from '@chatto/client/util/roomThreading';
 
 vi.mock('$lib/state/userProfiles.svelte', () => ({
+  getLivePosition: (_userId: string, fallback: string | null) => fallback,
   getLiveBotOwnerUserId: (_userId: string, fallback: string | null) => fallback,
   getLiveBio: () => null,
   getLiveTimezone: () => null,

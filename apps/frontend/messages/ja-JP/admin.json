@@ -266,6 +266,8 @@
         "unsaved_changes": "保存されていない変更があります。このページを離れて変更を破棄しますか？",
         "name_title": "名前と説明",
         "name_subtitle": "メンバーはルーム一覧とルーム上部でこれらを確認できます。",
+        "emoji_choose": "チャンネルの絵文字を選択",
+        "emoji_remove": "チャンネルの絵文字を削除",
         "visibility_title": "表示範囲",
         "membership_events_title": "メンバーの活動",
         "show_membership_events": "参加・退出イベントを表示",

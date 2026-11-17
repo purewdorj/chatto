@@ -22,9 +22,15 @@ const (
 	MaxCustomStatusTextLength  = 100
 	// MaxBioLength bounds a user's public bio in Unicode characters.
 	MaxBioLength = 1000
+	// MaxPositionLength bounds a user's public position (job title) in
+	// Unicode characters.
+	MaxPositionLength = 64
 )
 
 var ErrBioTooLong = fmt.Errorf("bio is too long")
+
+// ErrPositionTooLong reports a position longer than MaxPositionLength.
+var ErrPositionTooLong = fmt.Errorf("position is too long")
 
 var ErrCustomStatusEmojiRequired = fmt.Errorf("custom status emoji is required")
 var ErrCustomStatusEmojiInvalid = fmt.Errorf("custom status emoji must be a single supported emoji")
@@ -83,18 +89,18 @@ func (c *ChattoCore) updateUserDisplayNameAs(ctx context.Context, actorID, userI
 	return user, nil
 }
 
-// AdminUpdateUserProfile updates a user's login, display name, and/or bio as a
-// single admin-authored mutation. When multiple fields are changed, their
-// durable events are appended atomically in one batch.
-func (c *ChattoCore) AdminUpdateUserProfile(ctx context.Context, userID string, login, displayName, bio *string) (*readmodel.User, error) {
-	return c.updateUserProfileAs(ctx, SystemActorID, userID, login, displayName, bio, true)
+// AdminUpdateUserProfile updates a user's login, display name, bio, and/or
+// position as a single admin-authored mutation. When multiple fields are
+// changed, their durable events are appended atomically in one batch.
+func (c *ChattoCore) AdminUpdateUserProfile(ctx context.Context, userID string, login, displayName, bio, position *string) (*readmodel.User, error) {
+	return c.updateUserProfileAs(ctx, SystemActorID, userID, login, displayName, bio, position, true)
 }
 
 // UpdateUserBio updates a user's public bio. An empty value clears it. A no-op
 // write (unchanged bio) appends no EVT event.
 // Authorization: Caller should verify the actor is the user being updated.
 func (c *ChattoCore) UpdateUserBio(ctx context.Context, userID, bio string) (*readmodel.User, error) {
-	return c.updateUserProfileAs(ctx, userID, userID, nil, nil, &bio, true)
+	return c.updateUserProfileAs(ctx, userID, userID, nil, nil, &bio, nil, true)
 }
 
 // normalizeBio trims surrounding whitespace from bio text.
@@ -102,16 +108,22 @@ func normalizeBio(bio string) string {
 	return strings.TrimSpace(bio)
 }
 
+// normalizePosition trims surrounding whitespace from a position and joins
+// its lines with spaces, because a position is a single line of plain text.
+func normalizePosition(position string) string {
+	return strings.Join(strings.Fields(position), " ")
+}
+
 // UpdateOwnUserProfile applies one self-service identity patch as an atomic
 // batch. Omitted fields remain unchanged. Login changes retain the existing
 // cooldown and permission-based bypass. Conflicts are returned to the caller;
 // replacement values are never replayed after a concurrent profile edit.
 // Authorization: userID must identify the authenticated caller.
-func (c *ChattoCore) UpdateOwnUserProfile(ctx context.Context, userID string, login, displayName, bio *string) (*readmodel.User, error) {
+func (c *ChattoCore) UpdateOwnUserProfile(ctx context.Context, userID string, login, displayName, bio, position *string) (*readmodel.User, error) {
 	if err := requireAuthenticatedActor(userID); err != nil {
 		return nil, err
 	}
-	if login == nil && displayName == nil && bio == nil {
+	if login == nil && displayName == nil && bio == nil && position == nil {
 		return nil, ErrInvalidArgument
 	}
 	enforceCooldown := false
@@ -127,14 +139,14 @@ func (c *ChattoCore) UpdateOwnUserProfile(ctx context.Context, userID string, lo
 			return nil, err
 		}
 	}
-	return c.updateUserProfileWithCooldown(ctx, userID, userID, login, displayName, bio, false, enforceCooldown)
+	return c.updateUserProfileWithCooldown(ctx, userID, userID, login, displayName, bio, position, false, enforceCooldown)
 }
 
-func (c *ChattoCore) updateUserProfileAs(ctx context.Context, actorID, userID string, login, displayName, bio *string, retryConflicts bool) (*readmodel.User, error) {
-	return c.updateUserProfileWithCooldown(ctx, actorID, userID, login, displayName, bio, retryConflicts, false)
+func (c *ChattoCore) updateUserProfileAs(ctx context.Context, actorID, userID string, login, displayName, bio, position *string, retryConflicts bool) (*readmodel.User, error) {
+	return c.updateUserProfileWithCooldown(ctx, actorID, userID, login, displayName, bio, position, retryConflicts, false)
 }
 
-func (c *ChattoCore) updateUserProfileWithCooldown(ctx context.Context, actorID, userID string, login, displayName, bio *string, retryConflicts, enforceCooldown bool) (*readmodel.User, error) {
+func (c *ChattoCore) updateUserProfileWithCooldown(ctx context.Context, actorID, userID string, login, displayName, bio, position *string, retryConflicts, enforceCooldown bool) (*readmodel.User, error) {
 	user, err := c.GetUser(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
@@ -213,8 +225,18 @@ func (c *ChattoCore) updateUserProfileWithCooldown(ctx context.Context, actorID,
 		bioChanged = user.GetBio() != nextBio
 	}
 
+	var nextPosition string
+	var positionChanged bool
+	if position != nil {
+		nextPosition = normalizePosition(*position)
+		if utf8.RuneCountInString(nextPosition) > MaxPositionLength {
+			return nil, ErrPositionTooLong
+		}
+		positionChanged = user.GetPosition() != nextPosition
+	}
+
 	agg := evtstream.UserAggregate(userID)
-	entries := make([]evtstream.BatchEntry, 0, 2)
+	entries := make([]evtstream.BatchEntry, 0, 4)
 	if loginChanged {
 		loginChangedEvent := newEvent(actorID, &evtv1.Event{Event: &evtv1.Event_UserLoginChanged{
 			UserLoginChanged: &evtv1.UserLoginChangedEvent{UserId: userID},
@@ -261,6 +283,21 @@ func (c *ChattoCore) updateUserProfileWithCooldown(ctx context.Context, actorID,
 		}
 		entries = append(entries, evtstream.BatchEntry{Subject: agg.SubjectFor(bioChangedEvent), Event: bioChangedEvent})
 	}
+	if positionChanged {
+		positionChangedEvent := newEvent(actorID, &evtv1.Event{Event: &evtv1.Event_UserPositionChanged{
+			UserPositionChanged: &evtv1.UserPositionChangedEvent{UserId: userID},
+		}})
+		// Clearing omits the encrypted payload; readers treat absence as
+		// "position cleared".
+		if nextPosition != "" {
+			encryptedPosition, err := c.encryptUserPIIString(ctx, positionChangedEvent.GetId(), userID, evtstream.EventUserPositionChanged, "position", nextPosition)
+			if err != nil {
+				return nil, fmt.Errorf("encrypt position: %w", err)
+			}
+			positionChangedEvent.GetUserPositionChanged().EncryptedPosition = encryptedPosition
+		}
+		entries = append(entries, evtstream.BatchEntry{Subject: agg.SubjectFor(positionChangedEvent), Event: positionChangedEvent})
+	}
 
 	checkUserExists := func() error {
 		if actorID == userID && loginChanged && c.usernameManaged(userID) {
@@ -278,7 +315,8 @@ func (c *ChattoCore) updateUserProfileWithCooldown(ctx context.Context, actorID,
 		// case-only rename cannot bypass a concurrent rename's cooldown.
 		if !retryConflicts && ((login != nil && current.GetLogin() != user.GetLogin()) ||
 			(displayName != nil && current.GetDisplayName() != user.GetDisplayName()) ||
-			(bio != nil && current.GetBio() != user.GetBio())) {
+			(bio != nil && current.GetBio() != user.GetBio()) ||
+			(position != nil && current.GetPosition() != user.GetPosition())) {
 			return events.ErrConflict
 		}
 		return nil
@@ -319,6 +357,9 @@ func (c *ChattoCore) updateUserProfileWithCooldown(ctx context.Context, actorID,
 	if bioChanged {
 		user.Bio = nextBio
 	}
+	if positionChanged {
+		user.Position = nextPosition
+	}
 	c.logger.Info("Updated user profile", "id", userID)
 	return user, nil
 }
@@ -335,15 +376,15 @@ func (c *ChattoCore) updateUserProfileWithCooldown(ctx context.Context, actorID,
 // user.manage-accounts neither checks nor advances it. Conflicts are returned
 // to the caller; replacement values are never replayed after a concurrent
 // profile edit.
-func (c *ChattoCore) UpdateManagedUserProfile(ctx context.Context, actorID, targetUserID string, login, displayName, bio *string) (*readmodel.User, error) {
+func (c *ChattoCore) UpdateManagedUserProfile(ctx context.Context, actorID, targetUserID string, login, displayName, bio, position *string) (*readmodel.User, error) {
 	if err := requireAuthenticatedActor(actorID); err != nil {
 		return nil, err
 	}
-	if login == nil && displayName == nil && bio == nil {
-		return nil, fmt.Errorf("%w: at least one of login, display_name, or bio must be provided", ErrInvalidArgument)
+	if login == nil && displayName == nil && bio == nil && position == nil {
+		return nil, fmt.Errorf("%w: at least one of login, display_name, bio, or position must be provided", ErrInvalidArgument)
 	}
 	if actorID == targetUserID {
-		return c.UpdateOwnUserProfile(ctx, actorID, login, displayName, bio)
+		return c.UpdateOwnUserProfile(ctx, actorID, login, displayName, bio, position)
 	}
 	enforceCooldown := false
 	if err := c.authorizeAtStableInputs(ctx, func() error {
@@ -362,7 +403,7 @@ func (c *ChattoCore) UpdateManagedUserProfile(ctx context.Context, actorID, targ
 	}); err != nil {
 		return nil, err
 	}
-	return c.updateUserProfileWithCooldown(ctx, actorID, targetUserID, login, displayName, bio, false, enforceCooldown)
+	return c.updateUserProfileWithCooldown(ctx, actorID, targetUserID, login, displayName, bio, position, false, enforceCooldown)
 }
 
 // AdminClearLoginChangeCooldown clears a human account's login cooldown.

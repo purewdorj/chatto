@@ -1,7 +1,7 @@
 # FDR-019: Room Lifecycle
 
 **Status:** Active
-**Last reviewed:** 2026-10-28
+**Last reviewed:** 2026-11-17
 
 ## Overview
 
@@ -12,7 +12,7 @@ A channel room goes through a lifecycle of create, edit, archive, unarchive, and
 - **Create** — server admins (or anyone with `room.create` in the target group) can start room creation from that group in the sidebar. They give the channel a visible 1–30-code-point Unicode name, an optional description, a room group, and the desired Threading Mode, with Enabled as the default. They may also enable Universal. Names are unique across the server after Unicode compatibility normalization and full case folding.
 - **Edit** — `room.manage` holders can change the name, description, group, Universal setting, Threading Mode, and explicit member set of an existing channel room.
 - **Settings update** — one room-settings request commits its supplied name,
-  description, Universal, Slow Mode, and Threading Mode together. A rejected
+  description, emoji, Universal, Slow Mode, and Threading Mode together. A rejected
   commit leaves all requested fields unchanged. Omitted fields retain their
   latest values when a concurrent update causes a retry. Group moves and
   membership changes remain separate commands.
@@ -20,6 +20,7 @@ A channel room goes through a lifecycle of create, edit, archive, unarchive, and
 - **Display** — when set, the optional description appears after the channel room name in the desktop room pane header.
 - **Membership activity** — `room.manage` holders can turn **Show join/leave events** off in General settings. It is on by default for new and existing channel rooms. The current setting applies to history and live activity for all clients that support it. Turning it on reveals stored activity again. It does not change membership, event delivery, calls, or moderation records. Older clients can continue to show the activity; older servers cannot edit the setting.
 - **Join preview** — a non-member who is allowed to list and join a visible channel room sees its group, description, exact effective member count, and up to five member identities before joining. Messages, files, and activity remain hidden. A user who cannot join sees only the access-denied state.
+- **Channel emoji** — `room.manage` holders can choose one Unicode emoji for a channel room in the Name & Description settings, or remove it. Clients show the emoji in place of the `#` symbol or the Universal globe in the room list, the room header, room links, the quick switcher, and the room directory. A channel has no emoji by default. DMs cannot have an emoji. Clients that do not know the field continue to show the `#` symbol.
 - **Universal** — a channel room with Universal enabled behaves as joined for every server member who is currently eligible to join it. The system does not fan out `UserJoinedRoomEvent` facts for implicit membership. Existing explicit memberships remain intact, so disabling Universal restores the prior explicit membership set.
 - **Bootstrap defaults** — fresh servers seed `#announcements` as Universal with announcement-only posting defaults and `#general` as a normal channel room in the default Lobby group. Those posting defaults are an explicit trusted seed option; a user-created room merely named `announcements` receives ordinary permissions.
 - **Join / leave** — joining a Universal room succeeds without writing an explicit membership event. Leaving a Universal room is rejected; users can instead configure that room's notification policy. DMs cannot be Universal.
@@ -164,10 +165,24 @@ to timeline rows only.
 timeline noise without removing facts that clients and integrations need.
 **Tradeoff:** Older clients can continue to show membership activity.
 
+### 16. The channel emoji is one catalogue emoji
+
+**Decision:** Store the channel emoji as durable room state in a dedicated
+`RoomEmojiChangedEvent`. The server accepts one complete Unicode emoji from the
+bundled emoji catalogue, the same rule as custom status emoji. An empty value
+clears it. The emoji replaces the channel symbol only; the room name does not
+change.
+**Why:** A dedicated state-carrying event keeps replay simple and does not
+change `RoomUpdatedEvent`. One catalogue emoji keeps the icon the same size as
+the symbol and prevents free text in the icon position. Keeping the emoji
+separate from the name keeps name uniqueness, search, and mentions unchanged.
+**Tradeoff:** Custom server emoji and images are not available as channel
+icons.
+
 ## Permissions
 
 - `room.create` — create a new channel room in a group. Configurable per group.
-- `room.manage` — edit, archive, unarchive, delete, change Universal and Threading Mode state, and list, inspect, add, or remove members for a channel room. Configurable per group and per room.
+- `room.manage` — edit (including the channel emoji), archive, unarchive, delete, change Universal and Threading Mode state, and list, inspect, add, or remove members for a channel room. Configurable per group and per room.
 - `role.manage` — configure role permission decisions at room scope without granting general room-management authority.
 - `room.remove-member` — remove a current channel-room member with a reason and optional suspension. Configurable per group and per room.
 - `room.join` — gates whether a user can become an explicit member of an unarchived room and whether a user is an implicit member of a Universal room. Configurable per group and per room.

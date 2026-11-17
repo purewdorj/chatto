@@ -8,6 +8,7 @@ identity, body rendering, and row geometry consistent.
 <script lang="ts">
   import AccountName from '$lib/components/users/AccountName.svelte';
   import UserCustomStatusBadge from '$lib/components/UserCustomStatusBadge.svelte';
+  import UserPosition from '$lib/components/users/UserPosition.svelte';
   import { getLiveCustomStatus } from '$lib/state/userProfiles.svelte';
   import type { Snippet } from 'svelte';
   import type { ClassValue } from 'svelte/elements';
@@ -207,6 +208,9 @@ identity, body rendering, and row geometry consistent.
                 <UserCustomStatusBadge status={customStatus} />
                 {@render authorSuffix?.()}
               </strong>
+            {/if}
+            {#if !authorLoading}
+              <UserPosition userId={actor.id} class="text-sm leading-tight" />
             {/if}
           {:else if authorLoading && !actor?.deleted}
             <LoadingFog class="h-4 w-24 shrink-0" />

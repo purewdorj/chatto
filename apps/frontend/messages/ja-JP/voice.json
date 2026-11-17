@@ -10,6 +10,8 @@
     "already_in_another_call": "すでに別の通話中です",
     "join": "音声通話に参加する",
     "join_call": "通話に参加",
+    "incoming_call": "着信",
+    "decline_call": "拒否",
     "start_call": "通話を開始します",
     "leave": "通話を終了します",
     "open_call_room": "{room} を開く",

@@ -21,3 +21,5 @@ export {
 } from './login';
 
 export { validateAndNormalizeBio, normalizeBio, MAX_BIO_LENGTH } from './bio';
+
+export { validateAndNormalizePosition, normalizePosition, MAX_POSITION_LENGTH } from './position';

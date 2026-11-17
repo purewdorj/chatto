@@ -266,6 +266,8 @@
         "unsaved_changes": "Masz niezapisane zmiany. Czy chcesz opuścić tę stronę i je odrzucić?",
         "name_title": "Nazwa i opis",
         "name_subtitle": "Członkowie widzą je na liście pokojów i u góry pokoju.",
+        "emoji_choose": "Wybierz emoji kanału",
+        "emoji_remove": "Usuń emoji kanału",
         "visibility_title": "Widoczność",
         "membership_events_title": "Aktywność członków",
         "show_membership_events": "Pokaż dołączenia i odejścia",

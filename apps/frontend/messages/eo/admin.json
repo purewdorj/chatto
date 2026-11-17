@@ -266,6 +266,8 @@
         "unsaved_changes": "Vi havas nekonservitajn ŝanĝojn. Ĉu forlasi ĉi tiun paĝon kaj forĵeti ilin?",
         "name_title": "Nomo kaj priskribo",
         "name_subtitle": "Membroj vidas ilin en la listo de ĉambroj kaj supre en la ĉambro.",
+        "emoji_choose": "Elekti emoĝion de kanalo",
+        "emoji_remove": "Forigi emoĝion de kanalo",
         "visibility_title": "Videbleco",
         "membership_events_title": "Agado de membroj",
         "show_membership_events": "Montri aliĝojn kaj forirojn",

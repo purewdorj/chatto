@@ -47,6 +47,7 @@ type roomCatalogEntry struct {
 	threadSlowModeSeconds *uint32
 	threadingMode         evtv1.RoomThreadingMode
 	showMembershipEvents  bool
+	emoji                 string
 	notice                *readmodel.RoomNotice
 }
 
@@ -129,6 +130,10 @@ func (p *RoomCatalogProjection) Apply(event *evtv1.Event, seq uint64) error {
 	case *evtv1.Event_RoomMembershipEventsVisibilityChanged:
 		if entry := p.rooms[e.RoomMembershipEventsVisibilityChanged.GetRoomId()]; entry != nil {
 			entry.showMembershipEvents = e.RoomMembershipEventsVisibilityChanged.GetShowMembershipEvents()
+		}
+	case *evtv1.Event_RoomEmojiChanged:
+		if entry := p.rooms[e.RoomEmojiChanged.GetRoomId()]; entry != nil {
+			entry.emoji = e.RoomEmojiChanged.GetEmoji()
 		}
 	case *evtv1.Event_RoomDeleted:
 		delete(p.rooms, e.RoomDeleted.GetRoomId())
@@ -243,6 +248,7 @@ func entryToRoom(id string, entry *roomCatalogEntry) *readmodel.Room {
 		ThreadSlowModeSeconds: entry.threadSlowModeSeconds,
 		ThreadingMode:         normalizedRoomThreadingMode(entry.kind, entry.threadingMode),
 		ShowMembershipEvents:  entry.showMembershipEvents,
+		Emoji:                 entry.emoji,
 	}
 	// Callers can change nested timestamps, notice state, and optional values
 	// without changing the projection.

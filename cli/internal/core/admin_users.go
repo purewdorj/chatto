@@ -171,7 +171,7 @@ func (c *ChattoCore) AdminUpdateOperatorUser(ctx context.Context, req AdminUpdat
 	if req.Login == nil && req.DisplayName == nil {
 		return nil, ErrInvalidArgument
 	}
-	user, err := c.AdminUpdateUserProfile(ctx, req.UserID, req.Login, req.DisplayName, nil)
+	user, err := c.AdminUpdateUserProfile(ctx, req.UserID, req.Login, req.DisplayName, nil, nil)
 	if err != nil {
 		return nil, err
 	}

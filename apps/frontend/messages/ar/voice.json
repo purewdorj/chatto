@@ -10,6 +10,8 @@
     "already_in_another_call": "موجود بالفعل في مكالمة أخرى",
     "join": "الانضمام إلى المكالمة الصوتية",
     "join_call": "انضم للمكالمة",
+    "incoming_call": "مكالمة واردة",
+    "decline_call": "رفض",
     "start_call": "ابدأ المكالمة",
     "leave": "مغادرة المكالمة",
     "open_call_room": "فتح {room}",

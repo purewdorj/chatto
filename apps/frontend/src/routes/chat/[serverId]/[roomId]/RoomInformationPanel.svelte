@@ -27,6 +27,7 @@ The sections share one scroll viewport and retain their disclosure preferences.
     roomCreatedAt = null,
     memberCount = null,
     isUniversal = false,
+    roomEmoji = '',
     pinsStore,
     noticeStore,
     canManageNotice = false,
@@ -40,6 +41,8 @@ The sections share one scroll viewport and retain their disclosure preferences.
     /** Null means that the first member page has not loaded yet. */
     memberCount?: number | null;
     isUniversal?: boolean;
+    /** Channel emoji shown in place of the channel symbol. Empty when unset. */
+    roomEmoji?: string;
     pinsStore?: RoomPinsStore;
     noticeStore?: RoomNoticeStore;
     canManageNotice?: boolean;
@@ -63,7 +66,7 @@ The sections share one scroll viewport and retain their disclosure preferences.
   >
     {#snippet content()}
       <div class="space-y-2 px-2 py-3">
-        <p class="font-semibold"><RoomName name={roomName} {isUniversal} /></p>
+        <p class="font-semibold"><RoomName name={roomName} {isUniversal} emoji={roomEmoji} /></p>
         {#if roomDescription.trim()}
           <div class="min-w-0 text-muted">
             <MessageContent body={roomDescription} />

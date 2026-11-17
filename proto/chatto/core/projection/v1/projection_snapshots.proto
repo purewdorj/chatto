@@ -444,6 +444,8 @@ message ProjectedUserProfileSnapshot {
   ProjectedEncryptedUserStringSnapshot bio = 12;
   // Event ID of the verified email selected for account-directed email.
   string primary_verified_email_event_id = 13;
+  // Encrypted position (job title) fact, when set.
+  ProjectedEncryptedUserStringSnapshot position = 14;
 }
 
 message ProjectedEncryptedUserStringSnapshot {
@@ -561,6 +563,8 @@ message RoomSnapshot {
   RoomNoticeSnapshot notice = 15;
   // Room-owned display setting. Membership facts remain available.
   bool show_membership_events = 16;
+  // Channel emoji shown in place of the channel symbol. Empty when unset.
+  string emoji = 17;
 }
 
 // RoomNoticeSnapshot stores room notice state for projection restore.
@@ -575,7 +579,7 @@ message RoomNoticeSnapshot {
   google.protobuf.Timestamp published_at = 4;
 }
 
-// UserSnapshot stores non-hydrated user state. Login, display name, and bio
+// UserSnapshot stores non-hydrated user state. Login, display name, bio, and position
 // exist only as encrypted values in ProjectedUserProfileSnapshot.
 message UserSnapshot {
   string id = 1;

@@ -21,6 +21,8 @@ export type RoomListItem = {
   description?: string | null;
   type: RoomKind;
   isUniversal: boolean;
+  /** Channel emoji shown in place of the channel symbol. Empty when unset. */
+  emoji?: string;
   /** Displayed membership. The connection verifies the session before allowing commands. */
   viewerIsMember: boolean | null;
   viewerCanReadMessages?: boolean | null;
@@ -110,6 +112,7 @@ export class RoomListView {
           description: room.description,
           type: roomKindOrChannel(room.kind),
           isUniversal: room.isUniversal,
+          emoji: room.emoji,
           viewerIsMember: room.isMember,
           viewerCanReadMessages: room.canReadMessages,
           viewerCanJoinRoom: room.canJoinRoom,

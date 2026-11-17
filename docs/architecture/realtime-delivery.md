@@ -256,6 +256,9 @@ Room Slow Mode changes invalidate open thread deadlines as well as room state.
 and authorization path. Live delivery and catch-up map it to the dedicated public
 payload. It changes no membership-event delivery rules.
 
+`RoomEmojiChangedEvent` follows the same room-directory path and maps to the
+dedicated public `RoomEmojiChangedEvent` payload.
+
 The bundled frontend gives each cursor-bounded ConnectRPC call a 10-second
 deadline. A timeout fails reconciliation and closes the socket without cursor
 advance. A new resource reset also starts a new local projection generation.

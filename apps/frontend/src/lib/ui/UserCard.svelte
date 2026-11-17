@@ -19,6 +19,7 @@ Actions are siblings of that button, so controls never nest inside a button.
     name,
     identity,
     username,
+    position,
     avatar,
     secondary,
     badges,
@@ -40,6 +41,8 @@ Actions are siblings of that button, so controls never nest inside a button.
     identity?: AccountNameIdentity | null;
     /** Canonical login, rendered consistently below the display name. */
     username?: string;
+    /** Public position (job title), rendered before the username when set. */
+    position?: string | null;
     avatar: Snippet;
     secondary?: Snippet;
     badges?: Snippet;
@@ -94,9 +97,12 @@ Actions are siblings of that button, so controls never nest inside a button.
       </span>
       {@render badges?.()}
     </span>
-    {#if secondary || username}
+    {#if secondary || username || position}
       <span class="block truncate text-start text-xs text-muted" data-testid={secondaryTestId}>
-        {#if secondary}{@render secondary()}{:else}<bdi dir="ltr">@{username}</bdi>{/if}
+        {#if secondary}{@render secondary()}{:else}{#if position}<bdi data-testid="user-position"
+              >{position}</bdi
+            >{#if username}&nbsp;·&nbsp;{/if}{/if}{#if username}<bdi dir="ltr">@{username}</bdi
+            >{/if}{/if}
       </span>
     {/if}
   </span>

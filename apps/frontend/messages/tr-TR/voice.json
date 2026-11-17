@@ -10,6 +10,8 @@
     "already_in_another_call": "Zaten başka bir aramadayım",
     "join": "Sesli aramaya katıl",
     "join_call": "Görüşmeye katıl",
+    "incoming_call": "Gelen arama",
+    "decline_call": "Reddet",
     "start_call": "Aramayı başlat",
     "leave": "Aramayı bırak",
     "open_call_room": "{room} aç",

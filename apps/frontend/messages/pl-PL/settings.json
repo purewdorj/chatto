@@ -177,6 +177,12 @@
         "description": "Do {max} znaków, widoczne w Twoim profilu.",
         "placeholder": "Napisz coś krótko o sobie",
         "too_long": "Tekst może mieć najwyżej {max} znaków."
+      },
+      "position": {
+        "label": "Stanowisko",
+        "description": "Nazwa stanowiska, do {max} znaków, widoczna obok nazwy.",
+        "placeholder": "Na przykład kierownik sprzedaży",
+        "too_long": "Stanowisko może mieć najwyżej {max} znaków."
       }
     },
     "preferences": {

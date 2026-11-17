@@ -266,6 +266,8 @@
         "unsaved_changes": "Vous avez des modifications non enregistrées. Quitter cette page et les abandonner ?",
         "name_title": "Nom et description",
         "name_subtitle": "Les membres les voient dans la liste des salles et en haut de la salle.",
+        "emoji_choose": "Choisir l’émoji du canal",
+        "emoji_remove": "Retirer l’émoji du canal",
         "visibility_title": "Visibilité",
         "membership_events_title": "Activité des membres",
         "show_membership_events": "Afficher les arrivées et les départs",

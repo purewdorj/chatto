@@ -45,6 +45,9 @@ func userSummaryWithPresence(ctx context.Context, api *API, user *readmodel.User
 		bio := user.GetBio()
 		summary.Bio = &bio
 	}
+	if user.GetPosition() != "" {
+		summary.Position = new(user.GetPosition())
+	}
 	timezone := ""
 	if settings, err := api.core.GetUserSettings(ctx, user.GetId()); err == nil && settings != nil && settings.GetShareTimezone() {
 		timezone = settings.GetTimezone()

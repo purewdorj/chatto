@@ -36,6 +36,7 @@ func TestUserProjectionSnapshotRoundTripExcludesAuthenticationState(t *testing.T
 		{Id: "E3", Event: &evtv1.Event_UserExternalIdentityLinked{UserExternalIdentityLinked: &evtv1.UserExternalIdentityLinkedEvent{UserId: "U1", Issuer: "https://private-issuer.example", Subject: "private-provider-subject", ProviderId: "private-provider"}}},
 		{Id: "E4", Event: &evtv1.Event_OauthConsentGranted{OauthConsentGranted: &evtv1.OAuthConsentGrantedEvent{UserId: "U1", RedirectOrigin: "https://private-client.example"}}},
 		userEvent("E5", createdAt.Add(time.Minute), &evtv1.Event{Event: &evtv1.Event_UserServerPreferencesChanged{UserServerPreferencesChanged: &evtv1.UserServerPreferencesChangedEvent{UserId: "U1", Preferences: &evtv1.ServerUserPreferences{Timezone: new("Europe/Berlin")}}}}),
+		userEvent("E6", createdAt.Add(2*time.Minute), positionChanged(t, contentKey, "E6", "U1", "Private Position")),
 	}
 	for i, event := range eventsToApply {
 		require.NoError(t, original.Apply(event, uint64(i+1)))
@@ -45,7 +46,7 @@ func TestUserProjectionSnapshotRoundTripExcludesAuthenticationState(t *testing.T
 	require.NoError(t, err)
 	require.NotEmpty(t, payload)
 	for _, secret := range [][]byte{
-		[]byte("alice-private"), []byte("Alice Private"), []byte("password-hash-secret"),
+		[]byte("alice-private"), []byte("Alice Private"), []byte("Private Position"), []byte("password-hash-secret"),
 		[]byte("private-issuer"), []byte("private-provider-subject"), []byte("private-provider"), []byte("private-client"),
 	} {
 		require.Falsef(t, bytes.Contains(payload, secret), "snapshot contains forbidden value %q", secret)
@@ -57,6 +58,7 @@ func TestUserProjectionSnapshotRoundTripExcludesAuthenticationState(t *testing.T
 	require.True(t, ok)
 	require.Equal(t, "alice-private", user.GetLogin())
 	require.Equal(t, "Alice Private", user.GetDisplayName())
+	require.Equal(t, "Private Position", user.GetPosition())
 	preferences, ok := restored.Preferences("U1")
 	require.True(t, ok)
 	require.Equal(t, "Europe/Berlin", preferences.GetTimezone())
@@ -263,16 +265,17 @@ func TestUserProjectionSnapshotSchemaExcludesPlaintextUserFields(t *testing.T) {
 	require.Nil(t, fields.ByName("login"))
 	require.Nil(t, fields.ByName("display_name"))
 	require.Nil(t, fields.ByName("bio"))
+	require.Nil(t, fields.ByName("position"))
 
 	// Even an accidentally hydrated retained model cannot add plaintext fields
 	// to the dedicated snapshot record.
 	p := NewUserProjection(nil, nil)
 	p.users["U1"] = &projectedUser{deleted: true, user: &readmodel.User{
-		Id: "U1", Login: "private-login", DisplayName: "private-display", Bio: "private-bio",
+		Id: "U1", Login: "private-login", DisplayName: "private-display", Bio: "private-bio", Position: "private-position",
 	}}
 	payload, err := p.Snapshot()
 	require.NoError(t, err)
-	for _, plaintext := range []string{"private-login", "private-display", "private-bio"} {
+	for _, plaintext := range []string{"private-login", "private-display", "private-bio", "private-position"} {
 		require.NotContains(t, string(payload), plaintext)
 	}
 	require.NoError(t, NewUserProjection(nil, nil).Restore(payload))

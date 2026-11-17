@@ -153,7 +153,7 @@ func applyBootstrapBot(ctx context.Context, logger *log.Logger, c *core.ChattoCo
 
 	configured := true
 	if spec.Bio != "" {
-		if _, err := c.AdminUpdateUserProfile(ctx, bot.User.GetId(), nil, nil, &spec.Bio); err != nil {
+		if _, err := c.AdminUpdateUserProfile(ctx, bot.User.GetId(), nil, nil, &spec.Bio, nil); err != nil {
 			configured = false
 			logger.Error("Failed to set [bootstrap] bot bio", "user_id", bot.User.GetId())
 		}

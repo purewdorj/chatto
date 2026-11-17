@@ -177,6 +177,12 @@
         "description": "最大{max}文字。プロフィールに表示されます。",
         "placeholder": "自分について簡単に紹介しましょう",
         "too_long": "紹介文は{max}文字以内にしてください。"
+      },
+      "position": {
+        "label": "役職",
+        "description": "役職名。最大{max}文字。名前の横に表示されます。",
+        "placeholder": "例: 営業マネージャー",
+        "too_long": "役職は{max}文字以内にしてください。"
       }
     },
     "preferences": {

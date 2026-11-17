@@ -98,7 +98,8 @@ describe('createAdminRoomLayoutAPI', () => {
             archived: true,
             isUniversal: false,
             slowModeSeconds: 0,
-            threadingMode: RoomThreadingMode.ENABLED
+            threadingMode: RoomThreadingMode.ENABLED,
+            emoji: ''
           }
         ],
         items: [
@@ -112,7 +113,8 @@ describe('createAdminRoomLayoutAPI', () => {
               archived: true,
               isUniversal: false,
               slowModeSeconds: 0,
-              threadingMode: RoomThreadingMode.ENABLED
+              threadingMode: RoomThreadingMode.ENABLED,
+              emoji: ''
             }
           }
         ]

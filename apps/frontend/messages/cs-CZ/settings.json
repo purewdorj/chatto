@@ -177,6 +177,12 @@
         "description": "Maximálně {max} znaků, zobrazuje se ve vašem profilu.",
         "placeholder": "Napište o sobě pár slov",
         "too_long": "Text může mít nejvýše {max} znaků."
+      },
+      "position": {
+        "label": "Pozice",
+        "description": "Pracovní pozice, nejvýše {max} znaků, zobrazuje se vedle jména.",
+        "placeholder": "Například obchodní manažer",
+        "too_long": "Pozice může mít nejvýše {max} znaků."
       }
     },
     "preferences": {

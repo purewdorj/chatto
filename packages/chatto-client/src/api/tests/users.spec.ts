@@ -95,6 +95,27 @@ describe('createUserAPI', () => {
     });
   });
 
+  it('sends and maps a position, and clears it with an empty value', async () => {
+    mocks.updateUserProfile.mockReturnValue({
+      user: new APIUser({ id: 'U1', login: 'alice', position: 'Sales Manager' })
+    });
+    const api = createUserAPI(config());
+
+    await expect(api.updateUserProfile('U1', { position: 'Sales Manager' })).resolves.toMatchObject(
+      { id: 'U1', position: 'Sales Manager' }
+    );
+    expect(receivedRequest(mocks.updateUserProfile)).toMatchObject({
+      userId: 'U1',
+      position: 'Sales Manager',
+      updateMask: { paths: ['position'] }
+    });
+
+    mocks.updateUserProfile.mockReturnValue({ user: new APIUser({ id: 'U1', login: 'alice' }) });
+    await expect(api.updateUserProfile('U1', { position: '' })).resolves.toMatchObject({
+      position: null
+    });
+  });
+
   it('uploads and deletes an avatar for an explicit user', async () => {
     mocks.uploadAvatar.mockReturnValue({
       user: new APIUser({
@@ -154,6 +175,7 @@ describe('createUserAPI', () => {
         bot: { ownerUserId: 'owner' },
         avatarUrl: 'https://cdn/avatar.webp',
         bio: null,
+        position: null,
         timezone: null
       }
     ]);
@@ -191,6 +213,7 @@ describe('createUserAPI', () => {
       isBot: false,
       avatarUrl: null,
       bio: null,
+      position: null,
       timezone: null
     });
   });

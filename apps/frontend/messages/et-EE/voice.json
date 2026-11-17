@@ -10,6 +10,8 @@
     "already_in_another_call": "Juba teises kõnes",
     "join": "Liituge häälkõnega",
     "join_call": "Liitu kõnega",
+    "incoming_call": "Sissetulev kõne",
+    "decline_call": "Keeldu",
     "start_call": "Alustage kõnet",
     "leave": "Jäta kõne",
     "open_call_room": "Ava {room}",

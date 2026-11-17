@@ -10,6 +10,8 @@
     "already_in_another_call": "Redan i ett annat samtal",
     "join": "Gå med i röstsamtal",
     "join_call": "Gå med i samtalet",
+    "incoming_call": "Inkommande samtal",
+    "decline_call": "Avvisa",
     "start_call": "Starta samtalet",
     "leave": "Lämna samtalet",
     "open_call_room": "Öppna {room}",

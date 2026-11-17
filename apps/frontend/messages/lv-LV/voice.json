@@ -10,6 +10,8 @@
     "already_in_another_call": "Jau citā zvanā",
     "join": "Pievienojieties balss zvanam",
     "join_call": "Pievienojieties zvanam",
+    "incoming_call": "Ienākošais zvans",
+    "decline_call": "Noraidīt",
     "start_call": "Sāciet zvanu",
     "leave": "Atstāt zvanu",
     "open_call_room": "Atvērt {room}",

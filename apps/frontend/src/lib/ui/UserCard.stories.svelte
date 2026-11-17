@@ -25,6 +25,18 @@
   </div>
 </Story>
 
+<Story name="Position" asChild>
+  <div class="flex w-64 flex-col gap-2">
+    <UserCard name="Alice" username="alice" position="Sales Manager" {avatar} />
+    <UserCard
+      name="Alexandra Konstantinopoulou"
+      username="alexandra.k"
+      position="Senior Regional Business Development Manager"
+      {avatar}
+    />
+  </div>
+</Story>
+
 {#snippet avatar()}
   <span
     class="grid size-8 shrink-0 place-items-center rounded-full bg-surface-emphasized"

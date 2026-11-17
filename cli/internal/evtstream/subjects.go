@@ -80,6 +80,7 @@ const (
 	EventRoomNoticeChanged                     = "room_notice_changed"
 	EventRoomThreadingModeChanged              = "room_threading_mode_changed"
 	EventRoomMembershipEventsVisibilityChanged = "room_membership_events_visibility_changed"
+	EventRoomEmojiChanged                      = "room_emoji_changed"
 	EventRoomDeleted                           = "room_deleted"
 	EventUserJoinedRoom                        = "user_joined"
 	EventUserLeftRoom                          = "user_left"
@@ -172,6 +173,7 @@ const (
 	EventUserLoginChanged               = "login_changed"
 	EventUserDisplayNameChanged         = "display_name_changed"
 	EventUserBioChanged                 = "bio_changed"
+	EventUserPositionChanged            = "position_changed"
 	EventUserAvatarSet                  = "avatar_set"
 	EventUserAvatarCleared              = "avatar_cleared"
 	EventUserVerifiedEmailAdded         = "verified_email_added"
@@ -290,6 +292,8 @@ func EventTypeOf(e *evtv1.Event) string {
 		return EventRoomThreadingModeChanged
 	case *evtv1.Event_RoomMembershipEventsVisibilityChanged:
 		return EventRoomMembershipEventsVisibilityChanged
+	case *evtv1.Event_RoomEmojiChanged:
+		return EventRoomEmojiChanged
 	case *evtv1.Event_RoomDeleted:
 		return EventRoomDeleted
 	case *evtv1.Event_UserJoinedRoom:
@@ -453,6 +457,8 @@ func EventTypeOf(e *evtv1.Event) string {
 		return EventUserDisplayNameChanged
 	case *evtv1.Event_UserBioChanged:
 		return EventUserBioChanged
+	case *evtv1.Event_UserPositionChanged:
+		return EventUserPositionChanged
 	case *evtv1.Event_UserAvatarSet:
 		return EventUserAvatarSet
 	case *evtv1.Event_UserAvatarCleared:

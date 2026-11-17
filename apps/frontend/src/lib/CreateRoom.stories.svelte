@@ -28,7 +28,8 @@
       groupId: input.groupId,
       universal: input.universal ?? false,
       slowModeSeconds: 0,
-      threadingMode: input.threadingMode ?? RoomThreadingMode.ENABLED
+      threadingMode: input.threadingMode ?? RoomThreadingMode.ENABLED,
+      emoji: ''
     }),
     joinRoom: async () => null
   };

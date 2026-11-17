@@ -32,6 +32,7 @@ calls, and similar room-specific panels can plug into the same shell. See the
   } from '$lib/ui';
   import DeletedUserLabel from '$lib/components/DeletedUserLabel.svelte';
   import UserCustomStatusBadge from '$lib/components/UserCustomStatusBadge.svelte';
+  import { getLivePosition } from '$lib/state/userProfiles.svelte';
   import UserMenu from '$lib/components/users/UserMenu.svelte';
   import { UserMenuState } from '$lib/components/users/UserMenuState.svelte';
 
@@ -78,6 +79,7 @@ calls, and similar room-specific panels can plug into the same shell. See the
     hasActiveCall = false,
     canBanRoomMembers = false,
     isUniversal = false,
+    roomEmoji = '',
     currentUserId = null,
     membersStore,
     searchStore,
@@ -110,6 +112,8 @@ calls, and similar room-specific panels can plug into the same shell. See the
     hasActiveCall?: boolean;
     canBanRoomMembers?: boolean;
     isUniversal?: boolean;
+    /** Channel emoji shown in place of the channel symbol. Empty when unset. */
+    roomEmoji?: string;
     currentUserId?: string | null;
     membersStore: RoomMembersStore;
     searchStore?: MessageSearchStore;
@@ -578,6 +582,7 @@ calls, and similar room-specific panels can plug into the same shell. See the
       {roomCreatedAt}
       memberCount={membersStore.hasFirstPage ? memberCount : null}
       {isUniversal}
+      {roomEmoji}
       {pinsStore}
       {noticeStore}
       {canManageNotice}
@@ -637,6 +642,7 @@ calls, and similar room-specific panels can plug into the same shell. See the
     <UserCard
       variant="row"
       username={member.login}
+      position={member.deleted ? null : getLivePosition(member.id, null)}
       class={!member.isBot && !isOnline ? 'opacity-50' : undefined}
       secondaryTestId="room-member-login"
       testId="room-member-card"

@@ -83,7 +83,8 @@ describe('Profile settings page', () => {
         displayName: input.displayName ?? server.currentUser.user!.displayName,
         login: input.login ?? server.currentUser.user!.login,
         avatarUrl: server.currentUser.user!.avatarUrl,
-        bio: input.bio ?? server.currentUser.user!.bio
+        bio: input.bio ?? server.currentUser.user!.bio,
+        position: input.position ?? null
       })
     );
     mocks.uploadAvatar.mockReset();
@@ -162,6 +163,21 @@ describe('Profile settings page', () => {
       });
     });
     await expect.element(bioInput).toHaveTextContent('I build analytical engines.');
+  });
+
+  it('sends a normalized sparse position update', async () => {
+    const { container } = render(ProfilePage);
+    await settle();
+
+    const positionInput = q(container, '[data-testid="settings-position"]') as HTMLInputElement;
+    setInputValue(positionInput, '  Sales   Manager ');
+    (q(container, 'button[type="submit"]') as HTMLButtonElement).click();
+
+    await vi.waitFor(() => {
+      expect(mocks.updateProfile).toHaveBeenCalledWith('user-1', {
+        position: 'Sales Manager'
+      });
+    });
   });
 
   it('uses the preferred visual editor and saves Markdown', async () => {

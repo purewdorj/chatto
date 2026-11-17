@@ -178,7 +178,8 @@
               </span>
             {:else}
               <span class="min-w-0 flex-1 truncate">
-                {#if item.kind === 'room'}<span class="text-muted">#</span
+                {#if item.kind === 'room'}<span class="text-muted" aria-hidden="true"
+                    >{item.emoji || '#'}</span
                   >{/if}{#if item.kind === 'dm'}<DirectMessageName
                     participants={item.participants ?? []}
                     currentUserId={item.currentUserId}

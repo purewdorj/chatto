@@ -287,6 +287,16 @@ func accountCreated(t *testing.T, contentKey *messageContentKey, eventID, userID
 	}}}
 }
 
+func positionChanged(t *testing.T, contentKey *messageContentKey, eventID, userID, position string) *evtv1.Event {
+	t.Helper()
+	encryptedPosition, err := encryptUserPIIStringWithContentKey(contentKey, eventID, userID, evtstream.EventUserPositionChanged, "position", position)
+	require.NoError(t, err)
+	return &evtv1.Event{Event: &evtv1.Event_UserPositionChanged{UserPositionChanged: &evtv1.UserPositionChangedEvent{
+		UserId:            userID,
+		EncryptedPosition: encryptedPosition,
+	}}}
+}
+
 func loginChanged(t *testing.T, contentKey *messageContentKey, eventID, userID, login string) *evtv1.Event {
 	t.Helper()
 	encryptedLogin, err := encryptUserPIIStringWithContentKey(contentKey, eventID, userID, evtstream.EventUserLoginChanged, "login", login)

@@ -133,6 +133,14 @@ message UserBioChangedEvent {
   EncryptedUserString encrypted_bio = 10;
 }
 
+// UserPositionChangedEvent is the authoritative durable fact for a change to
+// a user's position (job title). An empty encrypted value clears the
+// position. Position text is user PII and stays encrypted at rest.
+message UserPositionChangedEvent {
+  string user_id = 1;
+  EncryptedUserString encrypted_position = 10;
+}
+
 message UserAvatarSetEvent {
   // Deprecated: legacy avatar storage pointer retained for decoding old
   // user events. New avatar writes append AssetCreatedEvent with

@@ -177,6 +177,12 @@
         "description": "Upp till {max} tecken, syns i din profil.",
         "placeholder": "Berätta lite om dig själv",
         "too_long": "Texten får vara högst {max} tecken."
+      },
+      "position": {
+        "label": "Befattning",
+        "description": "Jobbtitel, upp till {max} tecken, syns bredvid namnet.",
+        "placeholder": "Till exempel försäljningschef",
+        "too_long": "Befattningen får vara högst {max} tecken."
       }
     },
     "preferences": {

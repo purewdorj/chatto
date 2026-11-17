@@ -33,6 +33,8 @@ type AdminMember struct {
 	DisplayName string
 	// Bio is the user's public biography. Empty means unset.
 	Bio string
+	// Position is the user's public position (job title). Empty means unset.
+	Position string
 	// SharedTimezone is public only while the user enables time-zone sharing.
 	SharedTimezone              string
 	AvatarURL                   string
@@ -353,6 +355,7 @@ func (c *ChattoCore) adminMemberForViewer(ctx context.Context, actorID string, u
 		Login:          user.GetLogin(),
 		DisplayName:    user.GetDisplayName(),
 		Bio:            user.GetBio(),
+		Position:       user.GetPosition(),
 		AvatarURL:      avatarURL,
 		Roles:          roles,
 		CreatedAt:      user.GetCreatedAt(),

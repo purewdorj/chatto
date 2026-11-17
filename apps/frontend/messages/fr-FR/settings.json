@@ -177,6 +177,12 @@
         "description": "Jusqu'à {max} caractères, visible sur votre profil.",
         "placeholder": "Présentez-vous en quelques mots",
         "too_long": "Le texte ne peut pas dépasser {max} caractères."
+      },
+      "position": {
+        "label": "Poste",
+        "description": "Intitulé du poste, jusqu'à {max} caractères, affiché à côté du nom.",
+        "placeholder": "Par exemple, directeur commercial",
+        "too_long": "Le poste ne peut pas dépasser {max} caractères."
       }
     },
     "preferences": {

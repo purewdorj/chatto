@@ -177,6 +177,12 @@
         "description": "En fazla {max} karakter, profilinizde görünür.",
         "placeholder": "Kendinizden kısaca bahsedin",
         "too_long": "Metin en fazla {max} karakter olabilir."
+      },
+      "position": {
+        "label": "Pozisyon",
+        "description": "Unvan, en fazla {max} karakter, adın yanında görünür.",
+        "placeholder": "Örneğin, Satış Müdürü",
+        "too_long": "Pozisyon en fazla {max} karakter olabilir."
       }
     },
     "preferences": {
