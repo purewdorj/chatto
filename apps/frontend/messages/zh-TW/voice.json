@@ -10,6 +10,8 @@
     "already_in_another_call": "已在另一通通話中",
     "join": "加入語音通話",
     "join_call": "加入通話",
+    "incoming_call": "來電",
+    "decline_call": "拒絕",
     "start_call": "開始通話",
     "leave": "離開通話",
     "open_call_room": "開啟 {room}",

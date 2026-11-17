@@ -155,6 +155,7 @@ Public user fields.
 | `timezone` | `optional string` | IANA time zone the user chose to share on their profile (for example "Europe/Berlin"). Absent means the user has not enabled time-zone sharing or has no stored time zone. |
 | `bot` | [`BotInfo`](#chatto-api-v1-BotInfo) | Present for a bot identity; absent for humans and deleted-account references. |
 | `deactivated` | `bool` | True while the account cannot use this server. Data is retained and access can be restored. |
+| `position` | `optional string` | Plain-text position (job title) shown next to the user's name, when set. |
 
 <a id="chatto-api-v1-CapabilityGrant"></a>
 
@@ -750,6 +751,7 @@ Public room metadata returned by room commands.
 | `thread_slow_mode_seconds` | `optional uint32` | Per-user interval within each thread, including its root. Zero disables the interval. Absent on servers without independent thread slow mode. |
 | `created_at` | `google.protobuf.Timestamp` | When the room was created. Absent when unavailable on an older server. |
 | `show_membership_events` | `optional bool` | Whether clients show room join/leave activity. Absence on older servers means true. Membership state and event delivery are not affected. |
+| `emoji` | `string` | Channel emoji that clients show in place of the channel symbol. Empty when the channel has no emoji. Direct-message rooms always leave it empty. |
 
 <a id="chatto-api-v1-RoomNotice"></a>
 

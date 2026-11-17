@@ -266,6 +266,8 @@
         "unsaved_changes": "Máte neuložené změny. Chcete opustit tuto stránku a zahodit je?",
         "name_title": "Název a popis",
         "name_subtitle": "Členové je vidí v seznamu místností a v horní části místnosti.",
+        "emoji_choose": "Vyberte emoji kanálu",
+        "emoji_remove": "Odeberte emoji kanálu",
         "visibility_title": "Viditelnost",
         "membership_events_title": "Aktivita členů",
         "show_membership_events": "Zobrazit příchody a odchody",

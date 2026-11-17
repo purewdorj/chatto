@@ -26,6 +26,8 @@ export type PublicRoom = {
   threadingMode: RoomThreadingMode;
   /** Undefined on older servers; clients then show membership activity. */
   showMembershipEvents?: boolean;
+  /** Channel emoji shown in place of the channel symbol. Empty when unset. */
+  emoji: string;
 };
 
 export type RoomSuspensionSummary = {
@@ -66,7 +68,8 @@ function publicRoom(room: Room | undefined): PublicRoom | null {
     slowModeSeconds: room.slowModeSeconds ?? 0,
     threadSlowModeSeconds: room.threadSlowModeSeconds,
     threadingMode: normalizeRoomThreadingMode(room.kind, room.threadingMode),
-    showMembershipEvents: room.showMembershipEvents
+    showMembershipEvents: room.showMembershipEvents,
+    emoji: room.emoji
   };
 }
 
@@ -136,6 +139,8 @@ export function createRoomCommandAPI(config: ConnectAPIConfig) {
       threadingMode?: RoomThreadingMode;
       /** Controls join/leave rows only; membership events still arrive. */
       showMembershipEvents?: boolean;
+      /** One complete Unicode emoji; an empty string clears the channel emoji. */
+      emoji?: string;
     }): Promise<PublicRoom | null> {
       try {
         const response = await rooms.updateRoom({
@@ -147,6 +152,7 @@ export function createRoomCommandAPI(config: ConnectAPIConfig) {
           threadSlowModeSeconds: input.threadSlowModeSeconds,
           threadingMode: input.threadingMode,
           showMembershipEvents: input.showMembershipEvents,
+          emoji: input.emoji,
           updateMask: updateMask(input, [
             'name',
             'description',
@@ -154,7 +160,8 @@ export function createRoomCommandAPI(config: ConnectAPIConfig) {
             'slowModeSeconds',
             'threadSlowModeSeconds',
             'threadingMode',
-            'showMembershipEvents'
+            'showMembershipEvents',
+            'emoji'
           ])
         });
         return publicRoom(response.room);

@@ -10,6 +10,8 @@
     "already_in_another_call": "Ben al in gesprek",
     "join": "Neem deel aan een spraakoproep",
     "join_call": "Neem deel aan het gesprek",
+    "incoming_call": "Inkomende oproep",
+    "decline_call": "Weigeren",
     "start_call": "Start gesprek",
     "leave": "Gesprek verlaten",
     "open_call_room": "{room} openen",

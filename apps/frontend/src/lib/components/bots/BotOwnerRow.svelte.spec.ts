@@ -11,6 +11,7 @@ vi.mock(
   async () => (await import('$lib/test-utils/serverScope.svelte')).serverScopeModule
 );
 vi.mock('$lib/state/userProfiles.svelte', () => ({
+  getLivePosition: (_userId: string, fallback: string | null) => fallback,
   getLiveBotOwnerUserId: (_userId: string, fallback: string | null) => fallback,
   getLiveDisplayName: (_id: string, fallback: string) => fallback,
   getLiveAvatarUrl: (_id: string, fallback: string | null) => fallback,

@@ -27,6 +27,8 @@ export type UserSummary = {
   avatarUrl: string | null;
   /** Public self-authored bio; `null` when unset. */
   bio?: string | null;
+  /** Public plain-text position (job title); `null` when unset. */
+  position?: string | null;
   /** Public IANA time zone the user shares; `null` when unset. */
   timezone?: string | null;
 };
@@ -50,6 +52,7 @@ export function mapUserSummary(user: APIUser): UserSummary {
     ...(user.bot ? { bot: { ownerUserId: user.bot.ownerUserId } } : {}),
     avatarUrl: user.avatarUrl || null,
     bio: user.bio || null,
+    position: user.position || null,
     timezone: user.timezone || null
   };
 }

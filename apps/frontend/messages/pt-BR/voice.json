@@ -10,6 +10,8 @@
     "already_in_another_call": "Já em outra ligação",
     "join": "Participar da chamada de voz",
     "join_call": "Participar da chamada",
+    "incoming_call": "Chamada recebida",
+    "decline_call": "Recusar",
     "start_call": "Iniciar chamada",
     "leave": "Sair da ligação",
     "open_call_room": "Abrir {room}",

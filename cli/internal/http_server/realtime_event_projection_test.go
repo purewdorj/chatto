@@ -27,6 +27,16 @@ func TestMembershipEventsVisibilityPublicMapping(t *testing.T) {
 	}
 }
 
+func TestRoomEmojiPublicMapping(t *testing.T) {
+	for _, emoji := range []string{"🚀", ""} {
+		source := &evtv1.Event{Event: &evtv1.Event_RoomEmojiChanged{RoomEmojiChanged: &evtv1.RoomEmojiChangedEvent{RoomId: "room", Emoji: emoji}}}
+		projected := projectRealtimeEvent("viewer", source)
+		if projected == nil || projected.GetRoomEmojiChanged().GetRoomId() != "room" || projected.GetRoomEmojiChanged().GetEmoji() != emoji {
+			t.Fatalf("unexpected public emoji: %v", projected)
+		}
+	}
+}
+
 func TestAccountDeactivationPublicEventOmitsAdministrator(t *testing.T) {
 	for _, deactivated := range []bool{true, false} {
 		source := &evtv1.Event{ActorId: "administrator", Event: &evtv1.Event_UserAccountDeactivationChanged{
@@ -241,6 +251,7 @@ func TestProjectRealtimeEventCollapsesDurableProfileFacts(t *testing.T) {
 		{name: "custom status", event: &evtv1.Event{Event: &evtv1.Event_UserCustomStatusSet{UserCustomStatusSet: &evtv1.UserCustomStatusSetEvent{UserId: "U1"}}}},
 		{name: "custom status cleared", event: &evtv1.Event{Event: &evtv1.Event_UserCustomStatusCleared{UserCustomStatusCleared: &evtv1.UserCustomStatusClearedEvent{UserId: "U1"}}}},
 		{name: "bio", event: &evtv1.Event{Event: &evtv1.Event_UserBioChanged{UserBioChanged: &evtv1.UserBioChangedEvent{UserId: "U1"}}}},
+		{name: "position", event: &evtv1.Event{Event: &evtv1.Event_UserPositionChanged{UserPositionChanged: &evtv1.UserPositionChangedEvent{UserId: "U1"}}}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

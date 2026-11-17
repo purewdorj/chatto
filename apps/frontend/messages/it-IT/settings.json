@@ -177,6 +177,12 @@
         "description": "Fino a {max} caratteri, mostrato nel tuo profilo.",
         "placeholder": "Racconta brevemente di te",
         "too_long": "Il testo può contenere al massimo {max} caratteri."
+      },
+      "position": {
+        "label": "Ruolo",
+        "description": "Qualifica, fino a {max} caratteri, mostrata accanto al nome.",
+        "placeholder": "Ad esempio, responsabile vendite",
+        "too_long": "Il ruolo può contenere al massimo {max} caratteri."
       }
     },
     "preferences": {

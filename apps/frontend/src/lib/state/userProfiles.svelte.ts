@@ -12,6 +12,7 @@ type ProfileView = {
   login?: string;
   customStatus?: CustomUserStatus | null;
   bio?: string | null;
+  position?: string | null;
   timezone?: string | null;
 };
 
@@ -32,6 +33,7 @@ function readProfile(userId: string): ProfileView | undefined {
       avatarUrl: null,
       customStatus: null,
       bio: null,
+      position: null,
       timezone: null
     };
   const user = store?.get(userId)?.user;
@@ -88,6 +90,15 @@ export function getLiveCustomStatus(
 export function getLiveBio(userId: string, fallback: string | null): string | null {
   const update = readProfile(userId);
   return update && 'bio' in update ? (update.bio ?? null) : fallback;
+}
+
+/**
+ * Get the live public position (job title) if available, otherwise return
+ * fallback.
+ */
+export function getLivePosition(userId: string, fallback: string | null): string | null {
+  const update = readProfile(userId);
+  return update && 'position' in update ? (update.position ?? null) : fallback;
 }
 
 /**

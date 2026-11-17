@@ -1528,6 +1528,7 @@ export class ServerStateStore {
       case 'roomSlowModeChanged':
       case 'roomThreadingModeChanged':
       case 'roomMembershipEventsVisibilityChanged':
+      case 'roomEmojiChanged':
       case 'userJoinedRoom':
         if (payload.case === 'roomUniversalChanged' && roomId) {
           this.invalidateRoomMembership(roomId);

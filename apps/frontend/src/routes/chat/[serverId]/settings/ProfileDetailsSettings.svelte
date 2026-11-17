@@ -17,8 +17,10 @@
   import { Button, Form, TextInput } from '$lib/ui/form';
   import {
     MAX_BIO_LENGTH,
+    MAX_POSITION_LENGTH,
     startsLoginCooldown,
     validateAndNormalizeBio,
+    validateAndNormalizePosition,
     validateAndNormalizeDisplayName,
     validateAndNormalizeLogin
   } from '$lib/validation';
@@ -35,12 +37,14 @@
   const seed = {
     displayName: currentUser.user?.displayName ?? '',
     login: currentUser.user?.login ?? '',
-    bio: currentUser.user?.bio ?? ''
+    bio: currentUser.user?.bio ?? '',
+    position: currentUser.user?.position ?? ''
   };
   let baseline = $state(seed);
   let displayName = $state(seed.displayName);
   let login = $state(seed.login);
   let bio = $state(seed.bio);
+  let position = $state(seed.position);
   let isSaving = $state(false);
   let error = $state('');
   let successMessage = $state('');
@@ -56,7 +60,10 @@
   const displayNameModified = $derived(displayName !== baseline.displayName);
   const loginModified = $derived(login !== baseline.login);
   const bioModified = $derived(bio !== baseline.bio);
-  const isModified = $derived(displayNameModified || loginModified || bioModified);
+  const positionModified = $derived(position !== baseline.position);
+  const isModified = $derived(
+    displayNameModified || loginModified || bioModified || positionModified
+  );
   const canBypassLoginCooldown = $derived(serverScope.store.permissions.canAdminManageAccounts);
   const usernameAvailability = $derived(
     currentUser.user?.actions?.changeUsername ??
@@ -109,7 +116,22 @@
       input.bio = validation.normalized;
     }
 
-    if (!input.displayName && !input.login && input.bio === undefined) return;
+    if (positionModified) {
+      const validation = validateAndNormalizePosition(position);
+      if (!validation.valid) {
+        error = validation.error ?? m('settings.profile.save_failed');
+        return;
+      }
+      input.position = validation.normalized;
+    }
+
+    if (
+      !input.displayName &&
+      !input.login &&
+      input.bio === undefined &&
+      input.position === undefined
+    )
+      return;
 
     if (input.login) {
       pendingUpdate = input;
@@ -144,6 +166,7 @@
         displayName: updated.displayName,
         login: updated.login,
         bio: updated.bio ?? '',
+        position: updated.position ?? null,
         lastLoginChange: startedCooldown ? new Date().toISOString() : user.lastLoginChange,
         actions: input.login ? undefined : user.actions
       }));
@@ -151,11 +174,13 @@
       baseline = {
         displayName: updated.displayName,
         login: updated.login,
-        bio: updated.bio ?? ''
+        bio: updated.bio ?? '',
+        position: updated.position ?? ''
       };
       displayName = baseline.displayName;
       login = baseline.login;
       bio = baseline.bio;
+      position = baseline.position;
 
       if (startedCooldown) localLastLoginChange = new Date();
 
@@ -202,6 +227,17 @@
     {#if !canChangeLogin}
       <Hint>{usernameChangeUnavailableMessage(usernameAvailability, now)}</Hint>
     {/if}
+
+    <TextInput
+      label={m('settings.profile.position.label')}
+      bind:value={position}
+      placeholder={m('settings.profile.position.placeholder')}
+      description={m('settings.profile.position.description', { max: MAX_POSITION_LENGTH })}
+      maxlength={MAX_POSITION_LENGTH}
+      disabled={isSaving}
+      testid="settings-position"
+      oninput={clearMessages}
+    />
 
     <UserBioEditor
       bind:value={bio}

@@ -12,6 +12,8 @@ export type AdminManagedUser = {
   avatarUrl?: string | null;
   /** Public self-authored bio; `null` when unset. */
   bio?: string | null;
+  /** Public position (job title); absent when unset. */
+  position?: string | null;
   isBot?: boolean;
   /** Public bot owner, used to determine access to bot management. */
   bot?: { ownerUserId: string };
@@ -228,6 +230,7 @@ function adminMember(member: APIAdminMember): AdminMember {
     displayName: summary.displayName,
     avatarUrl: summary.avatarUrl ?? null,
     bio: summary.bio,
+    position: summary.position,
     ...(summary.bot ? { isBot: true, bot: { ownerUserId: summary.bot.ownerUserId } } : {}),
     roles: [...member.roles],
     createdAt: member.createdAt?.toDate().toISOString() ?? null,

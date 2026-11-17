@@ -25,6 +25,7 @@ vi.mock(
 );
 // The route normally supplies live-profile context; these menu tests use the fetched sender snapshot.
 vi.mock('$lib/state/userProfiles.svelte', () => ({
+  getLivePosition: (_userId: string, fallback: string | null) => fallback,
   getLiveBotOwnerUserId: (_id: string, fallback: string | null) => fallback,
   getLiveBio: (_id: string, fallback: string | null) => fallback,
   getLiveTimezone: (_id: string, fallback: string | null) => fallback,

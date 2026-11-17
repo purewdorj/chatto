@@ -859,6 +859,53 @@ export class RoomMembershipEventsVisibilityChangedEvent extends Message<RoomMemb
 }
 
 /**
+ * RoomEmojiChangedEvent reports the new channel emoji. Clients show the emoji
+ * in place of the channel symbol. An empty emoji means that the channel has no
+ * emoji.
+ *
+ * @generated from message chatto.realtime.v1.RoomEmojiChangedEvent
+ */
+export class RoomEmojiChangedEvent extends Message<RoomEmojiChangedEvent> {
+  /**
+   * @generated from field: string room_id = 1;
+   */
+  roomId = "";
+
+  /**
+   * @generated from field: string emoji = 2;
+   */
+  emoji = "";
+
+  constructor(data?: PartialMessage<RoomEmojiChangedEvent>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "chatto.realtime.v1.RoomEmojiChangedEvent";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "room_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "emoji", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RoomEmojiChangedEvent {
+    return new RoomEmojiChangedEvent().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RoomEmojiChangedEvent {
+    return new RoomEmojiChangedEvent().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RoomEmojiChangedEvent {
+    return new RoomEmojiChangedEvent().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RoomEmojiChangedEvent | PlainMessage<RoomEmojiChangedEvent> | undefined, b: RoomEmojiChangedEvent | PlainMessage<RoomEmojiChangedEvent> | undefined): boolean {
+    return proto3.util.equals(RoomEmojiChangedEvent, a, b);
+  }
+}
+
+/**
  * UserJoinedRoomEvent reports that the actor joined a room.
  *
  * @generated from message chatto.realtime.v1.UserJoinedRoomEvent

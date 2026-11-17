@@ -13,6 +13,7 @@ option go_package = "github.com/chattocorp/chatto/cli/internal/pb/chatto/core/ev
 //
 // Top-level Event oneof tags owned by this file:
 //   - 300-305, 307-309: room lifecycle and notice on evt.room.{roomId}.*
+//   - 312-316: room invitations and channel settings on evt.room.{roomId}.*
 //   - 310-311: room membership on evt.room.{roomId}.*
 //   - 320: server-wide account deletion fan-out
 //   - 330-333: voice call lifecycle and participant lifecycle on evt.room.{roomId}.*
@@ -121,6 +122,15 @@ message RoomThreadingModeChangedEvent {
 message RoomMembershipEventsVisibilityChangedEvent {
   string room_id = 1;
   bool show_membership_events = 2;
+}
+
+// RoomEmojiChangedEvent records the emoji that clients show in place of the
+// channel symbol. It is a state-carrying event: replay applies the latest
+// value directly. An empty emoji clears the channel emoji.
+message RoomEmojiChangedEvent {
+  string room_id = 1;
+  // One complete Unicode emoji from the bundled emoji catalogue, or empty.
+  string emoji = 2;
 }
 
 // ============================================================================

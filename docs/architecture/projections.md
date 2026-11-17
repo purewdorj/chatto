@@ -260,7 +260,7 @@ Room, notice, membership, user, role, and room-layout read results use
 Snapshot codecs map projection state to dedicated `projection/v1` records;
 transport adapters map read results to public API records. The
 [`snapshot adapters`](../../cli/internal/core/read_model_snapshots.go) exclude
-hydrated login, display name, and bio structurally. Room snapshots retain raw
+hydrated login, display name, bio, and position structurally. Room snapshots retain raw
 threading enum values before read-time normalization and the room-owned membership
 activity display setting. Creation facts initialize that setting to true, including
 historical creation facts. Legacy group and link

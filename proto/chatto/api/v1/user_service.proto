@@ -85,7 +85,10 @@ message UpdateUserProfileRequest {
   }];
   // New Markdown biography, when changing it. Empty clears the bio.
   optional string bio = 4 [(buf.validate.field).string.max_len = 1000];
-  // Editable fields to apply or reset: display_name, login, bio.
+  // New plain-text position (job title), when changing it. Empty clears the
+  // position.
+  optional string position = 6 [(buf.validate.field).string.max_len = 64];
+  // Editable fields to apply or reset: display_name, login, bio, position.
   // Omit to infer populated fields; * selects all editable fields. An explicit
   // empty mask is invalid. Unselected values are ignored. Selected absent values
   // reset the field to its default, subject to field validation.
@@ -140,7 +143,7 @@ service UserService {
   // Gets visible user rows for multiple stable user IDs. Unknown IDs are
   // omitted from the response.
   rpc BatchGetUsers(BatchGetUsersRequest) returns (BatchGetUsersResponse);
-  // Updates the target user's login, display name, and/or bio. Users can
+  // Updates the target user's login, display name, bio, and/or position. Users can
   // update themselves. Updating another human requires user.manage-accounts.
   // A caller who updates another bot needs ownership of the bot,
   // user.manage-accounts, or bot.manage. Bot callers use the same permission checks.

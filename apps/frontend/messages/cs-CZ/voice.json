@@ -10,6 +10,8 @@
     "already_in_another_call": "Již v jiném hovoru",
     "join": "Připojte se k hlasovému hovoru",
     "join_call": "Připojte se k hovoru",
+    "incoming_call": "Příchozí hovor",
+    "decline_call": "Odmítnout",
     "start_call": "Zahájit hovor",
     "leave": "Opustit hovor",
     "open_call_room": "Otevřít {room}",

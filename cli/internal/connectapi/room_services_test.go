@@ -109,6 +109,26 @@ func TestRoomServiceLifecycleCommands(t *testing.T) {
 	if err != nil || !reset.Msg.GetRoom().GetShowMembershipEvents() {
 		t.Fatalf("reset membership activity: %v", err)
 	}
+	if room.GetEmoji() != "" {
+		t.Fatalf("created room emoji = %q, want empty", room.GetEmoji())
+	}
+	emojiResp, err := env.rooms.UpdateRoom(ctx, connect.NewRequest(&apiv1.UpdateRoomRequest{
+		RoomId: room.GetId(), Emoji: new("🚀"),
+	}))
+	if err != nil || emojiResp.Msg.GetRoom().GetEmoji() != "🚀" {
+		t.Fatalf("set room emoji: %v", err)
+	}
+	if _, err := env.rooms.UpdateRoom(ctx, connect.NewRequest(&apiv1.UpdateRoomRequest{
+		RoomId: room.GetId(), Emoji: new("rocket"),
+	})); errorCode(err) != connect.CodeInvalidArgument {
+		t.Fatalf("invalid room emoji error = %v, want InvalidArgument", err)
+	}
+	clearedEmoji, err := env.rooms.UpdateRoom(ctx, connect.NewRequest(&apiv1.UpdateRoomRequest{
+		RoomId: room.GetId(), UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"emoji"}},
+	}))
+	if err != nil || clearedEmoji.Msg.GetRoom().GetEmoji() != "" {
+		t.Fatalf("clear room emoji: %v", err)
+	}
 	encouraged := apiv1.RoomThreadingMode_ROOM_THREADING_MODE_ENCOURAGED
 	threadingResp, err := env.rooms.UpdateRoom(ctx, connect.NewRequest(&apiv1.UpdateRoomRequest{
 		RoomId: room.GetId(), ThreadingMode: &encouraged,

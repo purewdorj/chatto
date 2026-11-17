@@ -10,6 +10,8 @@
     "already_in_another_call": "Jam en alia voko",
     "join": "Aliĝu al voĉvoko",
     "join_call": "Aliĝu al voko",
+    "incoming_call": "Envena voko",
+    "decline_call": "Malakcepti",
     "start_call": "Komencu vokon",
     "leave": "Forlasu vokon",
     "open_call_room": "Malfermi {room}",

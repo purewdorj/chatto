@@ -266,6 +266,8 @@
         "unsaved_changes": "Du har osparade ändringar. Vill du lämna sidan och kasta dem?",
         "name_title": "Namn och beskrivning",
         "name_subtitle": "Medlemmar ser dessa i rumslistan och högst upp i rummet.",
+        "emoji_choose": "Välj kanalemoji",
+        "emoji_remove": "Ta bort kanalemoji",
         "visibility_title": "Synlighet",
         "membership_events_title": "Medlemsaktivitet",
         "show_membership_events": "Visa när medlemmar går med eller lämnar",

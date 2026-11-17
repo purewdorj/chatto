@@ -10,6 +10,8 @@
     "already_in_another_call": "Ya en otra llamada",
     "join": "Unirse a llamada de voz",
     "join_call": "Unirse a la llamada",
+    "incoming_call": "Llamada entrante",
+    "decline_call": "Rechazar",
     "start_call": "Iniciar llamada",
     "leave": "Dejar llamada",
     "open_call_room": "Abrir {room}",

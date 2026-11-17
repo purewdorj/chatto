@@ -35,6 +35,7 @@ profile settings.
   import type { ParticipantVolumeControl } from '$lib/state/server/callPreferences.svelte';
   import UserCustomStatusBadge from '$lib/components/UserCustomStatusBadge.svelte';
   import UserBio from '$lib/components/users/UserBio.svelte';
+  import UserPosition from '$lib/components/users/UserPosition.svelte';
   import Interval from '$lib/lifecycle/Interval.svelte';
   import { serverIdToSegment } from '$lib/navigation';
   import { useServerScope } from '$lib/state/server/scope.svelte';
@@ -84,6 +85,8 @@ profile settings.
       deleted?: boolean;
       avatarUrl?: string | null;
       bio?: string | null;
+      /** Public position (job title). */
+      position?: string | null;
       timezone?: string | null;
       presenceStatus: PresenceStatus;
       customStatus?: CustomUserStatus | null;
@@ -207,6 +210,7 @@ profile settings.
     <UserAvatar {user} size="md" />
     <div class="min-w-0 flex-1">
       <AccountName name={displayName} identity={user} class="font-semibold" />
+      <UserPosition userId={user.id} position={user.position ?? null} class="block text-xs" />
       <div class="truncate text-xs text-muted">@{getLiveLogin(user.id, user.login)}</div>
       <UserCustomStatusBadge status={customStatus} showText class="mt-1 max-w-full" />
     </div>

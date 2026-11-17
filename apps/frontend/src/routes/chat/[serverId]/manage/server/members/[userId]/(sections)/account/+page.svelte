@@ -54,7 +54,8 @@ account managers, plus deletion for viewers with the required permission.
         ...current,
         login: updated.login,
         displayName: updated.displayName,
-        bio: updated.bio ?? null
+        bio: updated.bio ?? null,
+        position: updated.position ?? null
       }));
       detail.invalidateMemberLists(target);
       for (const roleName of target.roleNames) detail.invalidateRole(target, roleName);

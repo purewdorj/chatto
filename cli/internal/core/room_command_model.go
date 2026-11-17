@@ -83,6 +83,8 @@ type RoomUpdateInput struct {
 	ThreadingMode         *evtv1.RoomThreadingMode
 	// ShowMembershipEvents changes timeline display without changing membership facts.
 	ShowMembershipEvents *bool
+	// Emoji changes the channel emoji. An empty value clears it. Channels only.
+	Emoji *string
 }
 
 type RoomIDInput struct {
@@ -159,7 +161,7 @@ func (s *RoomCommandModel) updateRoom(ctx context.Context, input RoomUpdateInput
 	if err != nil {
 		return nil, err
 	}
-	if input.Name == nil && input.Description == nil && input.Universal == nil && input.SlowModeSeconds == nil && input.ThreadSlowModeSeconds == nil && input.ThreadingMode == nil && input.ShowMembershipEvents == nil {
+	if input.Name == nil && input.Description == nil && input.Universal == nil && input.SlowModeSeconds == nil && input.ThreadSlowModeSeconds == nil && input.ThreadingMode == nil && input.ShowMembershipEvents == nil && input.Emoji == nil {
 		return nil, fmt.Errorf("%w: provide at least one room field to update", ErrInvalidArgument)
 	}
 	if input.SlowModeSeconds != nil && *input.SlowModeSeconds > MaxRoomSlowModeSeconds {
@@ -170,6 +172,13 @@ func (s *RoomCommandModel) updateRoom(ctx context.Context, input RoomUpdateInput
 	}
 	if input.ThreadingMode != nil && !IsValidRoomThreadingMode(*input.ThreadingMode) {
 		return nil, invalidArgument("invalid room threading mode")
+	}
+	if input.Emoji != nil {
+		emoji := strings.TrimSpace(*input.Emoji)
+		if emoji != "" && !IsValidUnicodeEmoji(emoji) {
+			return nil, invalidArgument("room emoji must be one emoji")
+		}
+		input.Emoji = &emoji
 	}
 	agg := evtstream.RoomAggregate(input.RoomID)
 	filter := agg.AllEventsFilter()
@@ -238,6 +247,11 @@ func (s *RoomCommandModel) updateRoom(ctx context.Context, input RoomUpdateInput
 				RoomMembershipEventsVisibilityChanged: &evtv1.RoomMembershipEventsVisibilityChangedEvent{
 					RoomId: input.RoomID, ShowMembershipEvents: *input.ShowMembershipEvents,
 				},
+			}})
+		}
+		if input.Emoji != nil && *input.Emoji != room.GetEmoji() {
+			add(&evtv1.Event{Event: &evtv1.Event_RoomEmojiChanged{
+				RoomEmojiChanged: &evtv1.RoomEmojiChangedEvent{RoomId: input.RoomID, Emoji: *input.Emoji},
 			}})
 		}
 		if len(entries) == 0 {

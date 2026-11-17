@@ -51,6 +51,8 @@ export type QuickSwitcherItem = {
   searchTerms?: string[];
   href?: string;
   icon?: string;
+  /** Channel emoji shown in place of the channel symbol. Empty when unset. */
+  emoji?: string;
   message?: MessageSearchResult;
   score: number;
 };
@@ -409,11 +411,13 @@ export class QuickSwitcherModel {
           id: user.id,
           targetUserId: user.id,
           label: user.displayName || user.login,
-          detail: [user.login ? `@${user.login}` : '', serverLabel].filter(Boolean).join(' · '),
+          detail: [user.position ?? '', user.login ? `@${user.login}` : '', serverLabel]
+            .filter(Boolean)
+            .join(' · '),
           serverId: instance.id,
           serverName,
           participants: [user],
-          searchTerms: [user.displayName, user.login],
+          searchTerms: [user.displayName, user.login, user.position ?? ''],
           score: 0
         }));
     });
@@ -497,6 +501,7 @@ export class QuickSwitcherModel {
           kind: 'room',
           id: room.id,
           label: room.name,
+          emoji: room.emoji,
           detail: serverLabel || logo.name,
           serverId: instance.id,
           serverName,
@@ -514,16 +519,19 @@ export class QuickSwitcherModel {
           const user = store.projection.users.view(id);
           if (!user?.id || user.deleted || user.deactivated || directMessageUserIds.has(user.id))
             continue;
+          const position = store.projection.users.get(user.id)?.user?.position ?? '';
           items.push({
             kind: 'user',
             id: user.id,
             targetUserId: user.id,
             label: user.displayName || user.login,
-            detail: [user.login ? `@${user.login}` : '', serverLabel].filter(Boolean).join(' · '),
+            detail: [position, user.login ? `@${user.login}` : '', serverLabel]
+              .filter(Boolean)
+              .join(' · '),
             serverId: instance.id,
             serverName,
             participants: [user],
-            searchTerms: [user.displayName, user.login],
+            searchTerms: [user.displayName, user.login, position],
             score: 0
           });
         }

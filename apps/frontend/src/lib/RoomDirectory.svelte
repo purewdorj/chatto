@@ -190,7 +190,7 @@ store owns only optimistic join/leave state.
   <li class="flex items-center gap-3 selectable-list-item px-3 py-1.5">
     {#snippet roomLabel()}
       <div class="flex min-w-0 items-start gap-2 font-medium">
-        <span class="mt-0.5 shrink-0 text-muted/60">#</span>
+        <span class="mt-0.5 shrink-0 text-muted/60" aria-hidden="true">{room.emoji || '#'}</span>
         <div class="min-w-0 flex-1">
           <div class="flex min-w-0 items-center gap-2">
             <span class="min-w-0 truncate">{room.name}</span>

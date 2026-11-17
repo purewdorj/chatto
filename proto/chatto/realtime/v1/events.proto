@@ -133,6 +133,14 @@ message RoomMembershipEventsVisibilityChangedEvent {
   bool show_membership_events = 2;
 }
 
+// RoomEmojiChangedEvent reports the new channel emoji. Clients show the emoji
+// in place of the channel symbol. An empty emoji means that the channel has no
+// emoji.
+message RoomEmojiChangedEvent {
+  string room_id = 1;
+  string emoji = 2;
+}
+
 // UserJoinedRoomEvent reports that the actor joined a room.
 message UserJoinedRoomEvent {
   string room_id = 1;

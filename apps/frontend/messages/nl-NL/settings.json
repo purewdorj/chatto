@@ -177,6 +177,12 @@
         "description": "Tot {max} tekens, zichtbaar in je profiel.",
         "placeholder": "Vertel anderen kort iets over jezelf",
         "too_long": "De tekst mag maximaal {max} tekens bevatten."
+      },
+      "position": {
+        "label": "Functie",
+        "description": "Functietitel, tot {max} tekens, zichtbaar naast de naam.",
+        "placeholder": "Bijvoorbeeld salesmanager",
+        "too_long": "De functie mag maximaal {max} tekens bevatten."
       }
     },
     "preferences": {

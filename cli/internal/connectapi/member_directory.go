@@ -122,7 +122,7 @@ func (s *userService) UpdateUserProfile(ctx context.Context, req *connect.Reques
 	if req.Msg.GetUserId() == "" {
 		return nil, invalidArgument("user_id is required")
 	}
-	updated, err := s.api.core.UpdateManagedUserProfile(ctx, caller.UserID, req.Msg.GetUserId(), req.Msg.Login, req.Msg.DisplayName, req.Msg.Bio)
+	updated, err := s.api.core.UpdateManagedUserProfile(ctx, caller.UserID, req.Msg.GetUserId(), req.Msg.Login, req.Msg.DisplayName, req.Msg.Bio, req.Msg.Position)
 	if err != nil {
 		return nil, err
 	}

@@ -34,6 +34,9 @@ type Room struct {
 	ThreadingMode evtv1.RoomThreadingMode
 	// ShowMembershipEvents controls client timeline display, not membership delivery.
 	ShowMembershipEvents bool
+	// Emoji is the channel emoji that clients show in place of the channel
+	// symbol. Empty when unset. Direct-message rooms never have one.
+	Emoji string
 	// Independent per-user thread interval. Absence in legacy records uses
 	// SlowModeSeconds; explicit zero disables thread slow mode.
 	ThreadSlowModeSeconds *uint32
@@ -123,6 +126,14 @@ func (x *Room) GetThreadSlowModeSeconds() uint32 {
 		return *x.ThreadSlowModeSeconds
 	}
 	return 0
+}
+
+// GetEmoji returns the field value, or its zero value for a nil receiver.
+func (x *Room) GetEmoji() string {
+	if x != nil {
+		return x.Emoji
+	}
+	return ""
 }
 
 // GetCreatedAt returns the field value, or its zero value for a nil receiver.
@@ -235,7 +246,7 @@ func (x *RoomMembership) GetRoomId() string {
 	return ""
 }
 
-// User is a hydrated user read model. Login, DisplayName, and Bio must not enter snapshot storage.
+// User is a hydrated user read model. Login, DisplayName, Bio, and Position must not enter snapshot storage.
 type User struct {
 	Id           string
 	Login        string // Unique login identifier
@@ -251,6 +262,9 @@ type User struct {
 	// Current public bio, hydrated at read boundaries from encrypted projected
 	// state. Never persisted in plaintext here.
 	Bio string
+	// Current public position (job title), hydrated at read boundaries from
+	// encrypted projected state. Never persisted in plaintext here.
+	Position string
 	// Deactivated accounts retain their data but cannot authenticate.
 	Deactivated bool
 }
@@ -328,6 +342,14 @@ func (x *User) GetBotOwnerUserId() string {
 func (x *User) GetBio() string {
 	if x != nil {
 		return x.Bio
+	}
+	return ""
+}
+
+// GetPosition returns the field value, or its zero value for a nil receiver.
+func (x *User) GetPosition() string {
+	if x != nil {
+		return x.Position
 	}
 	return ""
 }

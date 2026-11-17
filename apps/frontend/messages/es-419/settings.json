@@ -177,6 +177,12 @@
         "description": "Hasta {max} caracteres, visible en tu perfil.",
         "placeholder": "Cuéntanos algo breve sobre ti",
         "too_long": "El texto no puede tener más de {max} caracteres."
+      },
+      "position": {
+        "label": "Puesto",
+        "description": "Cargo, hasta {max} caracteres, visible junto al nombre.",
+        "placeholder": "Por ejemplo, gerente de ventas",
+        "too_long": "El puesto no puede tener más de {max} caracteres."
       }
     },
     "preferences": {

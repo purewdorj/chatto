@@ -1,6 +1,7 @@
 <script lang="ts">
   import { fullscreenVideo } from '$lib/state/globals.svelte';
   import { provideUserProfiles } from '$lib/state/userProfiles.svelte';
+  import IncomingCallBanner from '$lib/components/voice/IncomingCallBanner.svelte';
   import ChatRoot from './ChatRoot.svelte';
   import { serverRegistry } from '$lib/client';
 
@@ -27,6 +28,8 @@
     {@render children?.()}
   </ChatRoot>
 {/key}
+
+<IncomingCallBanner />
 
 {#if fullscreenVideo.isOpen}
   {#await loadFullscreenVideoOverlay() then { default: FullscreenVideoOverlay }}

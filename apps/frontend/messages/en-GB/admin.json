@@ -266,6 +266,8 @@
         "unsaved_changes": "You have unsaved changes. Leave this page and discard them?",
         "name_title": "Name & Description",
         "name_subtitle": "Members see these in the room list and at the top of the room.",
+        "emoji_choose": "Choose channel emoji",
+        "emoji_remove": "Remove channel emoji",
         "visibility_title": "Visibility",
         "membership_events_title": "Membership activity",
         "show_membership_events": "Show join/leave events",

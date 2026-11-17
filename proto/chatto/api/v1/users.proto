@@ -40,4 +40,6 @@ message User {
   BotInfo bot = 11;
   // True while the account cannot use this server. Data is retained and access can be restored.
   bool deactivated = 12;
+  // Plain-text position (job title) shown next to the user's name, when set.
+  optional string position = 13;
 }

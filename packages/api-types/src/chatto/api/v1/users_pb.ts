@@ -135,6 +135,13 @@ export class User extends Message<User> {
    */
   deactivated = false;
 
+  /**
+   * Plain-text position (job title) shown next to the user's name, when set.
+   *
+   * @generated from field: optional string position = 13;
+   */
+  position?: string;
+
   constructor(data?: PartialMessage<User>) {
     super();
     proto3.util.initPartial(data, this);
@@ -154,6 +161,7 @@ export class User extends Message<User> {
     { no: 10, name: "timezone", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 11, name: "bot", kind: "message", T: BotInfo },
     { no: 12, name: "deactivated", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 13, name: "position", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): User {

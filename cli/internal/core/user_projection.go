@@ -45,6 +45,7 @@ type projectedUser struct {
 	loginHash     string
 	displayName   *projectedUserPII
 	bio           *projectedUserPII
+	position      *projectedUserPII
 	deleted       bool
 	shredded      bool
 	avatar        *evtv1.AssetRecord
@@ -135,6 +136,8 @@ func (p *UserProjection) Apply(event *evtv1.Event, seq uint64) error {
 		p.applyDisplayNameChanged(event.GetId(), e.UserDisplayNameChanged)
 	case *evtv1.Event_UserBioChanged:
 		p.applyBioChanged(event.GetId(), e.UserBioChanged)
+	case *evtv1.Event_UserPositionChanged:
+		p.applyPositionChanged(event.GetId(), e.UserPositionChanged)
 	case *evtv1.Event_UserAvatarSet:
 		p.applyAvatarSet(e.UserAvatarSet)
 	case *evtv1.Event_UserAvatarCleared:
@@ -246,6 +249,8 @@ func (p *UserProjection) applyPreparedContentEvent(event *evtv1.Event, seq uint6
 		p.applyDisplayNameChanged(event.GetId(), value.UserDisplayNameChanged)
 	case *evtv1.Event_UserBioChanged:
 		p.applyBioChanged(event.GetId(), value.UserBioChanged)
+	case *evtv1.Event_UserPositionChanged:
+		p.applyPositionChanged(event.GetId(), value.UserPositionChanged)
 	case *evtv1.Event_UserAvatarSet:
 		p.applyAvatarSet(value.UserAvatarSet)
 	case *evtv1.Event_UserAvatarCleared:
@@ -425,6 +430,17 @@ func (p *UserProjection) applyBioChanged(eventID string, e *evtv1.UserBioChanged
 	u.bio = newProjectedUserPII(eventID, evtstream.EventUserBioChanged, "bio", e.GetEncryptedBio())
 }
 
+// applyPositionChanged stores the encrypted position fact. An event without
+// an encrypted payload clears the position; projected state stays
+// ciphertext-only.
+func (p *UserProjection) applyPositionChanged(eventID string, e *evtv1.UserPositionChangedEvent) {
+	if e == nil || e.GetUserId() == "" {
+		return
+	}
+	u := p.ensureUserLocked(e.GetUserId())
+	u.position = newProjectedUserPII(eventID, evtstream.EventUserPositionChanged, "position", e.GetEncryptedPosition())
+}
+
 func (p *UserProjection) applyAvatarSet(e *evtv1.UserAvatarSetEvent) {
 	if e == nil || e.GetUserId() == "" {
 		return
@@ -599,6 +615,7 @@ func (p *UserProjection) applyAccountDeleted(e *evtv1.UserAccountDeletedEvent) {
 	u.loginHash = ""
 	u.displayName = nil
 	u.bio = nil
+	u.position = nil
 	u.verifiedEmail = make(map[string]projectedVerifiedEmail)
 	u.primaryVerifiedEmailEventID = ""
 	u.loginChanged = time.Time{}
@@ -626,6 +643,7 @@ func (p *UserProjection) applyKeyShredded(userID string) {
 	u.loginHash = ""
 	u.displayName = nil
 	u.bio = nil
+	u.position = nil
 	u.preferences = nil
 	u.verifiedEmail = make(map[string]projectedVerifiedEmail)
 	u.primaryVerifiedEmailEventID = ""
@@ -754,6 +772,7 @@ type projectedUserSnapshot struct {
 	login       *projectedPIISnapshot
 	displayName *projectedPIISnapshot
 	bio         *projectedPIISnapshot
+	position    *projectedPIISnapshot
 	avatar      *evtv1.AssetRecord
 	preferences *evtv1.ServerUserPreferences
 	deleted     bool
@@ -807,6 +826,7 @@ func (p *UserProjection) userSnapshotLocked(userID string, u *projectedUser) *pr
 		login:       p.piiSnapshotLocked(userID, u.login),
 		displayName: p.piiSnapshotLocked(userID, u.displayName),
 		bio:         p.piiSnapshotLocked(userID, u.bio),
+		position:    p.piiSnapshotLocked(userID, u.position),
 		avatar:      avatar,
 		preferences: preferences,
 		deleted:     u.deleted,
@@ -848,6 +868,7 @@ func cloneProjectedUserSnapshot(source *projectedUserSnapshot) *projectedUserSna
 		login:       clonePII(source.login),
 		displayName: clonePII(source.displayName),
 		bio:         clonePII(source.bio),
+		position:    clonePII(source.position),
 		deleted:     source.deleted,
 		shredded:    source.shredded,
 	}
@@ -912,6 +933,11 @@ func (p *UserProjection) hydrateUserSnapshot(ctx context.Context, snapshot *proj
 		return nil, false, err
 	} else if ok {
 		snapshot.user.Bio = bio
+	}
+	if position, ok, err := p.decryptPIISnapshot(ctx, snapshot.user.GetId(), snapshot.position); err != nil {
+		return nil, false, err
+	} else if ok {
+		snapshot.user.Position = position
 	}
 	if statusExpired(snapshot.user.GetCustomStatus(), now) {
 		snapshot.user.CustomStatus = nil

@@ -87,6 +87,7 @@ describe('createMemberDirectoryAPI', () => {
           bot: { ownerUserId: 'owner' },
           avatarUrl: 'https://cdn/avatar.webp',
           bio: null,
+          position: null,
           timezone: null,
           presenceStatus: PresenceStatus.AWAY,
           customStatus: {
@@ -180,6 +181,7 @@ describe('createMemberDirectoryAPI', () => {
           isBot: false,
           avatarUrl: null,
           bio: null,
+          position: null,
           timezone: null,
           presenceStatus: PresenceStatus.DO_NOT_DISTURB,
           customStatus: null,

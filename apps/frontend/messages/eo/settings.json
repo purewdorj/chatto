@@ -177,6 +177,12 @@
         "description": "Ĝis {max} signoj, videbla en via profilo.",
         "placeholder": "Rakontu al aliaj iom pri vi",
         "too_long": "La priskribo povas havi maksimume {max} signojn."
+      },
+      "position": {
+        "label": "Posteno",
+        "description": "Laborposteno, ĝis {max} signoj, videbla apud la nomo.",
+        "placeholder": "Ekzemple, vendestro",
+        "too_long": "La posteno povas havi maksimume {max} signojn."
       }
     },
     "preferences": {

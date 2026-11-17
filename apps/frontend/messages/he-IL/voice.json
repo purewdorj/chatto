@@ -10,6 +10,8 @@
     "already_in_another_call": "כבר בשיחה אחרת",
     "join": "הצטרף לשיחה קולית",
     "join_call": "הצטרף לשיחה",
+    "incoming_call": "שיחה נכנסת",
+    "decline_call": "דחה",
     "start_call": "התחל שיחה",
     "leave": "יציאה מהשיחה",
     "open_call_room": "פתח את {room}",

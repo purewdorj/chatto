@@ -94,7 +94,9 @@ type User struct {
 	// Present for a bot identity; absent for humans and deleted-account references.
 	Bot *BotInfo `protobuf:"bytes,11,opt,name=bot,proto3" json:"bot,omitempty"`
 	// True while the account cannot use this server. Data is retained and access can be restored.
-	Deactivated   bool `protobuf:"varint,12,opt,name=deactivated,proto3" json:"deactivated,omitempty"`
+	Deactivated bool `protobuf:"varint,12,opt,name=deactivated,proto3" json:"deactivated,omitempty"`
+	// Plain-text position (job title) shown next to the user's name, when set.
+	Position      *string `protobuf:"bytes,13,opt,name=position,proto3,oneof" json:"position,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -206,13 +208,20 @@ func (x *User) GetDeactivated() bool {
 	return false
 }
 
+func (x *User) GetPosition() string {
+	if x != nil && x.Position != nil {
+		return *x.Position
+	}
+	return ""
+}
+
 var File_chatto_api_v1_users_proto protoreflect.FileDescriptor
 
 const file_chatto_api_v1_users_proto_rawDesc = "" +
 	"\n" +
 	"\x19chatto/api/v1/users.proto\x12\rchatto.api.v1\x1a\x1cchatto/api/v1/presence.proto\x1a\x1fchatto/api/v1/user_status.proto\"-\n" +
 	"\aBotInfo\x12\"\n" +
-	"\rowner_user_id\x18\x01 \x01(\tR\vownerUserId\"\xd1\x03\n" +
+	"\rowner_user_id\x18\x01 \x01(\tR\vownerUserId\"\xff\x03\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05login\x18\x02 \x01(\tR\x05login\x12!\n" +
@@ -226,10 +235,12 @@ const file_chatto_api_v1_users_proto_rawDesc = "" +
 	"\btimezone\x18\n" +
 	" \x01(\tH\x02R\btimezone\x88\x01\x01\x12(\n" +
 	"\x03bot\x18\v \x01(\v2\x16.chatto.api.v1.BotInfoR\x03bot\x12 \n" +
-	"\vdeactivated\x18\f \x01(\bR\vdeactivatedB\r\n" +
+	"\vdeactivated\x18\f \x01(\bR\vdeactivated\x12\x1f\n" +
+	"\bposition\x18\r \x01(\tH\x03R\bposition\x88\x01\x01B\r\n" +
 	"\v_avatar_urlB\x06\n" +
 	"\x04_bioB\v\n" +
-	"\t_timezoneJ\x04\b\b\x10\tR\x06is_botB\xb7\x01\n" +
+	"\t_timezoneB\v\n" +
+	"\t_positionJ\x04\b\b\x10\tR\x06is_botB\xb7\x01\n" +
 	"\x11com.chatto.api.v1B\n" +
 	"UsersProtoP\x01Z@github.com/chattocorp/chatto/cli/internal/pb/chatto/api/v1;apiv1\xa2\x02\x03CAX\xaa\x02\rChatto.Api.V1\xca\x02\rChatto\\Api\\V1\xe2\x02\x19Chatto\\Api\\V1\\GPBMetadata\xea\x02\x0fChatto::Api::V1b\x06proto3"
 

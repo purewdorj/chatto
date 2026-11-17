@@ -609,7 +609,7 @@ func (p *UserProjection) adminProjectionEstimate() (int64, int64, []ProjectionAd
 		}
 		if user.user != nil {
 			value := user.user
-			userBytes += int64(unsafe.Sizeof(*value)) + int64(len(value.Id)+len(value.Login)+len(value.DisplayName)+len(value.Bio)+len(value.BotOwnerUserId))
+			userBytes += int64(unsafe.Sizeof(*value)) + int64(len(value.Id)+len(value.Login)+len(value.DisplayName)+len(value.Bio)+len(value.Position)+len(value.BotOwnerUserId))
 			userBytes += int64(proto.Size(value.CreatedAt) + proto.Size(value.CustomStatus))
 		}
 		for _, pii := range []*projectedUserPII{user.login, user.displayName} {

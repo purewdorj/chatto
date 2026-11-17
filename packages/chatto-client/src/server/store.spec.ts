@@ -4552,6 +4552,27 @@ describe('ServerStateStore unified realtime resources', () => {
     expect(refreshWindow).not.toHaveBeenCalled();
   });
 
+  it('refreshes room state when a channel emoji changes', async () => {
+    const store = makeStore(new FakeServerConnection([]));
+    const refresh = apiMocks.readRealtimeResource;
+    const messages = store.rooms.messages('R1');
+    const refreshWindow = vi.spyOn(messages, 'refreshCurrentWindow');
+    await flushPromises();
+    refresh.mockClear();
+    refreshWindow.mockClear();
+    store.realtimeProjectionHandler(
+      new RealtimeProjectionUpdate({
+        event: new RealtimeEvent({
+          id: 'EMOJI',
+          event: { case: 'roomEmojiChanged', value: { roomId: 'R1', emoji: '🚀' } }
+        })
+      })
+    );
+    await store.waitForRealtimeReconciliation();
+    expect(refresh).toHaveBeenCalledWith('rooms', undefined);
+    expect(refreshWindow).not.toHaveBeenCalled();
+  });
+
   it('refreshes independent thread deadlines without using the settings event as a message anchor', async () => {
     const store = makeStore(new FakeServerConnection([]));
     const messages = store.rooms.messages('R1');

@@ -266,6 +266,8 @@
         "unsaved_changes": "Kaydedilmemiş değişiklikleriniz var. Bu sayfadan çıkıp değişiklikleri iptal etmek istiyor musunuz?",
         "name_title": "Ad ve açıklama",
         "name_subtitle": "Üyeler bunları oda listesinde ve odanın üst kısmında görür.",
+        "emoji_choose": "Kanal emojisini seçin",
+        "emoji_remove": "Kanal emojisini kaldırın",
         "visibility_title": "Görünürlük",
         "membership_events_title": "Üye etkinliği",
         "show_membership_events": "Katılma ve ayrılma olaylarını göster",

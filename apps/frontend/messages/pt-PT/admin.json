@@ -266,6 +266,8 @@
         "unsaved_changes": "Tem alterações por guardar. Pretende sair desta página e descartá-las?",
         "name_title": "Nome e descrição",
         "name_subtitle": "Os membros veem estas informações na lista de salas e no topo da sala.",
+        "emoji_choose": "Escolher emoji do canal",
+        "emoji_remove": "Remover emoji do canal",
         "visibility_title": "Visibilidade",
         "membership_events_title": "Atividade dos membros",
         "show_membership_events": "Mostrar entradas e saídas",

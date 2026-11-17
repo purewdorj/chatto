@@ -266,6 +266,8 @@
         "unsaved_changes": "Teil on salvestamata muudatusi. Kas soovite sellelt lehelt lahkuda ja neist loobuda?",
         "name_title": "Nimi ja kirjeldus",
         "name_subtitle": "Liikmed näevad neid ruumide loendis ja ruumi ülaosas.",
+        "emoji_choose": "Valige kanali emoji",
+        "emoji_remove": "Eemaldage kanali emoji",
         "visibility_title": "Nähtavus",
         "membership_events_title": "Liikmete tegevus",
         "show_membership_events": "Näita liitumisi ja lahkumisi",

@@ -1104,7 +1104,8 @@ func isRoomDirectoryProjectionEvent(event *evtv1.Event) bool {
 		*evtv1.Event_RoomUniversalChanged,
 		*evtv1.Event_RoomSlowModeChanged,
 		*evtv1.Event_RoomThreadingModeChanged,
-		*evtv1.Event_RoomMembershipEventsVisibilityChanged:
+		*evtv1.Event_RoomMembershipEventsVisibilityChanged,
+		*evtv1.Event_RoomEmojiChanged:
 		return true
 	default:
 		return false

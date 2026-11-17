@@ -488,6 +488,13 @@ func TestEventFactsUserLiveEVT(t *testing.T) {
 			}},
 			want: true,
 		},
+		{
+			name: "position change refreshes the public user projection",
+			event: &evtv1.Event{Event: &evtv1.Event_UserPositionChanged{
+				UserPositionChanged: &evtv1.UserPositionChangedEvent{UserId: "U1"},
+			}},
+			want: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

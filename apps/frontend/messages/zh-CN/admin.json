@@ -266,6 +266,8 @@
         "unsaved_changes": "你有尚未保存的更改。要离开此页面并放弃更改吗？",
         "name_title": "名称和描述",
         "name_subtitle": "成员会在聊天室列表和聊天室顶部看到这些信息。",
+        "emoji_choose": "选择频道表情符号",
+        "emoji_remove": "移除频道表情符号",
         "visibility_title": "可见范围",
         "membership_events_title": "成员活动",
         "show_membership_events": "显示加入和离开事件",

@@ -18,7 +18,9 @@
     formatCooldownRemaining,
     getLoginChangeCooldownRemaining,
     MAX_BIO_LENGTH,
+    MAX_POSITION_LENGTH,
     validateAndNormalizeBio,
+    validateAndNormalizePosition,
     validateAndNormalizeDisplayName,
     validateAndNormalizeLogin
   } from '$lib/validation';
@@ -45,12 +47,14 @@
   const seed = untrack(() => ({
     login: member.login,
     displayName: member.displayName,
-    bio: member.bio ?? ''
+    bio: member.bio ?? '',
+    position: member.position ?? ''
   }));
   let baseline = $state(seed);
   let editLogin = $state(seed.login);
   let editDisplayName = $state(seed.displayName);
   let editBio = $state(seed.bio);
+  let editPosition = $state(seed.position);
   let identityError = $state<string | null>(null);
   let savingIdentity = $state(false);
   let clearingCooldown = $state(false);
@@ -62,7 +66,10 @@
   const loginModified = $derived(editLogin !== baseline.login);
   const displayNameModified = $derived(editDisplayName !== baseline.displayName);
   const bioModified = $derived(editBio !== baseline.bio);
-  const identityModified = $derived(loginModified || displayNameModified || bioModified);
+  const positionModified = $derived(editPosition !== baseline.position);
+  const identityModified = $derived(
+    loginModified || displayNameModified || bioModified || positionModified
+  );
   const lastLoginChange = $derived(
     member?.lastLoginChange ? new Date(member.lastLoginChange) : null
   );
@@ -119,6 +126,15 @@
       input.bio = result.normalized;
     }
 
+    if (positionModified) {
+      const result = validateAndNormalizePosition(editPosition);
+      if (!result.valid || result.normalized === undefined) {
+        identityError = result.error ?? m('settings.profile.save_failed');
+        return;
+      }
+      input.position = result.normalized;
+    }
+
     savingIdentity = true;
     try {
       const updated = await updateIdentity(input);
@@ -126,11 +142,13 @@
         baseline = {
           login: updated.login,
           displayName: updated.displayName,
-          bio: updated.bio ?? ''
+          bio: updated.bio ?? '',
+          position: updated.position ?? ''
         };
         editLogin = baseline.login;
         editDisplayName = baseline.displayName;
         editBio = baseline.bio;
+        editPosition = baseline.position;
         toast.success(m('admin.members.identity_updated'));
       }
     } catch (error) {
@@ -142,10 +160,16 @@
 
   function resetIdentity(): void {
     if (!member) return;
-    baseline = { login: member.login, displayName: member.displayName, bio: member.bio ?? '' };
+    baseline = {
+      login: member.login,
+      displayName: member.displayName,
+      bio: member.bio ?? '',
+      position: member.position ?? ''
+    };
     editLogin = baseline.login;
     editDisplayName = baseline.displayName;
     editBio = baseline.bio;
+    editPosition = baseline.position;
     identityError = null;
   }
 
@@ -207,6 +231,16 @@
         testid="admin-identity-display-name"
         label={m('settings.profile.display_name.label')}
         bind:value={editDisplayName}
+        disabled={savingIdentity}
+      />
+      <TextInput
+        id="member-position"
+        testid="admin-identity-position"
+        label={m('settings.profile.position.label')}
+        bind:value={editPosition}
+        placeholder={m('settings.profile.position.placeholder')}
+        description={m('settings.profile.position.description', { max: MAX_POSITION_LENGTH })}
+        maxlength={MAX_POSITION_LENGTH}
         disabled={savingIdentity}
       />
       <UserBioEditor

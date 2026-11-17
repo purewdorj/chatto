@@ -87,6 +87,9 @@ func projectRealtimeEvent(viewerID string, source *evtv1.Event) *realtimev1.Real
 	case *evtv1.Event_RoomMembershipEventsVisibilityChanged:
 		v := e.RoomMembershipEventsVisibilityChanged
 		target.Event = &realtimev1.RealtimeEvent_RoomMembershipEventsVisibilityChanged{RoomMembershipEventsVisibilityChanged: &realtimev1.RoomMembershipEventsVisibilityChangedEvent{RoomId: v.GetRoomId(), ShowMembershipEvents: v.GetShowMembershipEvents()}}
+	case *evtv1.Event_RoomEmojiChanged:
+		v := e.RoomEmojiChanged
+		target.Event = &realtimev1.RealtimeEvent_RoomEmojiChanged{RoomEmojiChanged: &realtimev1.RoomEmojiChangedEvent{RoomId: v.GetRoomId(), Emoji: v.GetEmoji()}}
 	case *evtv1.Event_UserJoinedRoom:
 		target.Event = &realtimev1.RealtimeEvent_UserJoinedRoom{UserJoinedRoom: &realtimev1.UserJoinedRoomEvent{RoomId: e.UserJoinedRoom.GetRoomId()}}
 	case *evtv1.Event_UserLeftRoom:
@@ -169,6 +172,7 @@ func projectRealtimeEvent(viewerID string, source *evtv1.Event) *realtimev1.Real
 		*evtv1.Event_UserCustomStatusSet,
 		*evtv1.Event_UserCustomStatusCleared,
 		*evtv1.Event_UserBioChanged,
+		*evtv1.Event_UserPositionChanged,
 		*evtv1.Event_AssetCreated:
 		userID := core.UserIDOfPublicProfileEvent(source)
 		target.Event = &realtimev1.RealtimeEvent_UserProfileChanged{UserProfileChanged: &realtimev1.UserProfileChangedEvent{UserId: userID}}

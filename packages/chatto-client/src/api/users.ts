@@ -15,11 +15,16 @@ const REALTIME_RESOURCE_TIMEOUT_MS = 10_000;
 export { mapUserSummary, mapOptionalUserSummary, type UserSummary } from './userSummary.js';
 import { mapUserSummary, type UserSummary } from './userSummary.js';
 
-/** Profile fields to change. Omitted fields stay unchanged; an empty bio clears it. */
+/**
+ * Profile fields to change. Omitted fields stay unchanged; an empty bio or
+ * position clears it.
+ */
 export type UpdateUserProfileInput = {
   displayName?: string;
   login?: string;
   bio?: string;
+  /** Plain-text position (job title), at most 64 characters. */
+  position?: string;
 };
 
 export function createUserAPI(config: ConnectAPIConfig) {
@@ -67,7 +72,7 @@ export function createUserAPI(config: ConnectAPIConfig) {
         const response = await client.updateUserProfile({
           userId,
           ...input,
-          updateMask: updateMask(input, ['displayName', 'login', 'bio'])
+          updateMask: updateMask(input, ['displayName', 'login', 'bio', 'position'])
         });
         return requiredUser(response.user);
       });

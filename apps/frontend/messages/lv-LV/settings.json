@@ -177,6 +177,12 @@
         "description": "Līdz {max} rakstzīmēm, redams jūsu profilā.",
         "placeholder": "Pastāstiet īsi par sevi",
         "too_long": "Aprakstā var būt ne vairāk kā {max} rakstzīmes."
+      },
+      "position": {
+        "label": "Amats",
+        "description": "Amata nosaukums, līdz {max} rakstzīmēm, redzams blakus vārdam.",
+        "placeholder": "Piemēram, pārdošanas vadītājs",
+        "too_long": "Amatā var būt ne vairāk kā {max} rakstzīmes."
       }
     },
     "preferences": {

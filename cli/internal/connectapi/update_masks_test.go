@@ -97,6 +97,30 @@ func TestRoomMembershipEventsUpdateMask(t *testing.T) {
 	}
 }
 
+func TestRoomEmojiUpdateMask(t *testing.T) {
+	for _, test := range []struct {
+		name  string
+		value *string
+		mask  []string
+		want  *string
+	}{
+		{"set", new("🚀"), []string{"emoji"}, new("🚀")},
+		{"reset", nil, []string{"emoji"}, new("")},
+		{"unselected", new("🚀"), []string{"description"}, nil},
+		{"inferred", new("🚀"), nil, new("🚀")},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			request := &apiv1.UpdateRoomRequest{RoomId: "room", Emoji: test.value}
+			if test.mask != nil {
+				request.UpdateMask = &fieldmaskpb.FieldMask{Paths: test.mask}
+			}
+			masked, err := normalizeUpdateMask(request)
+			require.NoError(t, err)
+			require.Equal(t, test.want, masked.Emoji)
+		})
+	}
+}
+
 func TestUpdateMaskSelectionAndIsolation(t *testing.T) {
 	request := &apiv1.UpdateSettingsRequest{Timezone: new("Europe/Berlin"), ShareTimezone: new(true), UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"share_timezone", "share_timezone"}}}
 	masked, err := normalizeUpdateMask(request)

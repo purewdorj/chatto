@@ -7,6 +7,7 @@ import { setReactiveLocale } from '$lib/i18n/state.svelte';
 import SystemEventGroup from './SystemEventGroup.svelte';
 
 vi.mock('$lib/state/userProfiles.svelte', () => ({
+  getLivePosition: (_userId: string, fallback: string | null) => fallback,
   getLiveBotOwnerUserId: (_userId: string, fallback: string | null) => fallback,
   getLiveBio: () => null,
   getLiveTimezone: () => null,
