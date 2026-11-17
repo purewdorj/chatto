@@ -24,6 +24,8 @@ let chattoDesktopApplicationBundleIdentifier = "run.chatto.desktop"
 func isChattoDesktopApplication(_ bundleIdentifier: String?) -> Bool {
   bundleIdentifier == chattoDesktopApplicationBundleIdentifier
     || bundleIdentifier == "run.chatto.desktop.dev"
+    // Setunari build of the desktop app.
+    || bundleIdentifier == "mn.setunari.chatto"
 }
 
 private enum ProbeError: LocalizedError {

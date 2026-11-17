@@ -14,6 +14,7 @@ commit of this branch that production runs).
 | Placeholder text | `apps/frontend/messages/en-GB/quick_switcher.json` | "Search channels, people, and messages..." (other locales keep upstream text). |
 | AGPL source link | `apps/frontend/src/routes/chat/modals/AboutChattoModal.svelte` | About dialog links to this fork. |
 | Image build | `setunari/Dockerfile` | Builds frontend + server from source, packaged like `docker/Dockerfile.goreleaser`. |
+| Desktop app | `apps/desktop/build_profile.mjs`, `native/.../CaptureProbe.swift` | Release build is **Setunari Chat** (`mn.setunari.chatto`, data in `Setunari Chat Desktop`), installs next to the official Chatto app; no auto-update. Screen sharing excludes it like the official app. |
 
 Search for `Setunari` in the source to find each change.
 
@@ -29,7 +30,15 @@ git push origin setunari/main
 
 Then bump `CHATTO_REF` / `CHATTO_VERSION` in `Setunari/chat` `deploy/versions.env` and run its Deploy workflow.
 
-## Build locally
+## Build the Mac app
+
+```bash
+CHATTO_BUILD_VERSION=0.5.0-setunari.1 CHATTO_FRONTEND_PRECOMPRESS=1 mise desktop-build
+# -> apps/desktop/dist/Setunari Chat.app (ad-hoc signed; other Macs must allow it once in
+#    System Settings → Privacy & Security). Set CHATTO_MACOS_SIGN_IDENTITY for a real certificate.
+```
+
+## Build the server image locally
 
 ```bash
 docker build -f setunari/Dockerfile --build-arg VERSION=0.5.0-setunari.1 -t setunari-chatto:dev .
