@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Same colours as the iOS LaunchBackground asset. -->
+    <color name="launch_background">#F3F4F6</color>
+    <!-- Accent for the small notification icon. -->
+    <color name="notification_accent">#7A5A8C</color>
+    <!-- Incoming-call screen. -->
+    <color name="call_background">#1F1A24</color>
+    <color name="call_answer">#2E7D32</color>
+    <color name="call_decline">#C62828</color>
+</resources>

@@ -1,3 +1,4 @@
+import { NativePushPlatform } from '@chatto/api-types/api/v1/push_notifications_pb';
 import { protoInt64 } from '@bufbuild/protobuf';
 import { Code } from '@connectrpc/connect';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -53,6 +54,7 @@ describe('getAuthenticatedServerState', () => {
       runtime: {
         pushNotificationsEnabled: true,
         vapidPublicKey: 'vapid',
+        nativePushPlatforms: [NativePushPlatform.APNS, NativePushPlatform.FCM],
         livekitUrl: 'wss://livekit',
         videoProcessingEnabled: true,
         maxUploadSize: protoInt64.parse(123),
@@ -109,6 +111,7 @@ describe('getAuthenticatedServerState', () => {
       motd: 'hello',
       pushNotificationsEnabled: true,
       vapidPublicKey: 'vapid',
+      nativePushPlatforms: [NativePushPlatform.APNS, NativePushPlatform.FCM],
       livekitUrl: 'wss://livekit',
       videoProcessingEnabled: true,
       maxUploadSize: 123,
@@ -190,6 +193,7 @@ describe('getAuthenticatedServerState', () => {
     expect(state.description).toBeNull();
     expect(state.motd).toBeNull();
     expect(state.vapidPublicKey).toBeNull();
+    expect(state.nativePushPlatforms).toEqual([]);
     expect(state.livekitUrl).toBeNull();
     expect(state.viewerCanManageServer).toBe(false);
     expect(state.viewerCanCreateRooms).toBe(false);

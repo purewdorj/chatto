@@ -33,7 +33,7 @@ type ChattoConfig struct {
 	Limits          LimitsConfig          `toml:"limits,commented" comment:"Instance-wide resource limits. Use -1 for unlimited."`
 	Email           EmailConfig           `toml:"email" comment:"Transactional email transport configuration. SMTP is the default transport."`
 	SMTP            SMTPConfig            `toml:"smtp" comment:"SMTP configuration for transactional emails."`
-	Push            PushConfig            `toml:"push,commented" comment:"Web Push notification configuration."`
+	Push            PushConfig            `toml:"push,commented" comment:"Push notification configuration: browser Web Push and native APNs and FCM push."`
 	Video           VideoConfig           `toml:"video,commented" comment:"Video uploads and derivative settings."`
 	AssetProcessing AssetProcessingConfig `toml:"asset_processing" comment:"Built-in durable asset-processing worker."`
 	LiveKit         LiveKitConfig         `toml:"livekit,commented" comment:"LiveKit voice call configuration."`
@@ -473,6 +473,7 @@ func (c *ChattoConfig) Validate() error {
 			errs = append(errs, "push.vapid_subject is required when push is enabled")
 		}
 	}
+	errs = append(errs, c.Push.validateNative(c.Webserver.URL)...)
 
 	// LiveKit configuration
 	if c.LiveKit.Enabled {

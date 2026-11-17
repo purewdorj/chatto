@@ -278,26 +278,38 @@ func listPushRuntimeStateKeys(ctx context.Context, kv jetstream.KeyValue, filter
 }
 
 func (c *ChattoCore) claimPushEndpointOwnership(ctx context.Context, userID, endpoint string) error {
-	ownerKey := pushEndpointOwnerKey(endpoint)
-	subscriptionKey := pushSubscriptionKey(userID, endpoint)
+	return c.claimPushRecordOwnership(ctx, pushEndpointOwnerKey(endpoint), pushSubscriptionKey(userID, endpoint), userID, func(value []byte) (bool, error) {
+		var currentSubscription runtimestatev1.PushSubscription
+		if err := proto.Unmarshal(value, &currentSubscription); err != nil {
+			return false, fmt.Errorf("failed to unmarshal current push subscription: %w", err)
+		}
+		return currentSubscription.GetEndpoint() == endpoint, nil
+	})
+}
+
+// claimPushRecordOwnership makes the record at recordKey, at its current
+// revision, the exclusive owner of a push destination. The owner record at
+// ownerKey stores the user ID and the record revision. matches reports whether
+// the current record value still describes the destination of ownerKey. Web
+// Push subscriptions and native push devices share this claim protocol.
+func (c *ChattoCore) claimPushRecordOwnership(ctx context.Context, ownerKey, recordKey, userID string, matches func([]byte) (bool, error)) error {
 	for range pushEndpointOwnerMaxRetries {
-		subscriptionEntry, err := c.storage.runtimeStateKV.Get(ctx, subscriptionKey)
+		recordEntry, err := c.storage.runtimeStateKV.Get(ctx, recordKey)
 		if errors.Is(err, jetstream.ErrKeyNotFound) {
 			return nil
 		}
 		if err != nil {
-			return fmt.Errorf("failed to get current push subscription: %w", err)
+			return fmt.Errorf("failed to get current push record: %w", err)
 		}
-
-		var currentSubscription runtimestatev1.PushSubscription
-		if err := proto.Unmarshal(subscriptionEntry.Value(), &currentSubscription); err != nil {
-			return fmt.Errorf("failed to unmarshal current push subscription: %w", err)
+		ok, err := matches(recordEntry.Value())
+		if err != nil {
+			return err
 		}
-		if currentSubscription.GetEndpoint() != endpoint {
+		if !ok {
 			return nil
 		}
 
-		owner := pushEndpointOwner{UserID: userID, SubscriptionRevision: subscriptionEntry.Revision()}
+		owner := pushEndpointOwner{UserID: userID, SubscriptionRevision: recordEntry.Revision()}
 		value, err := json.Marshal(owner)
 		if err != nil {
 			return fmt.Errorf("failed to marshal push endpoint owner: %w", err)
@@ -305,7 +317,7 @@ func (c *ChattoCore) claimPushEndpointOwnership(ctx context.Context, userID, end
 		entry, err := c.storage.runtimeStateKV.Get(ctx, ownerKey)
 		if errors.Is(err, jetstream.ErrKeyNotFound) {
 			if ownerRevision, err := c.storage.runtimeStateKV.Create(ctx, ownerKey, value); err == nil {
-				if current, err := c.storage.runtimeStateKV.Get(ctx, subscriptionKey); err == nil && current.Revision() == owner.SubscriptionRevision {
+				if current, err := c.storage.runtimeStateKV.Get(ctx, recordKey); err == nil && current.Revision() == owner.SubscriptionRevision {
 					return nil
 				}
 				if err := c.deleteStalePushEndpointOwner(ctx, ownerKey, ownerRevision); err != nil {
@@ -326,7 +338,7 @@ func (c *ChattoCore) claimPushEndpointOwnership(ctx context.Context, userID, end
 			return fmt.Errorf("failed to unmarshal push endpoint owner: %w", err)
 		}
 		if current == owner {
-			if latest, err := c.storage.runtimeStateKV.Get(ctx, subscriptionKey); err == nil && latest.Revision() == owner.SubscriptionRevision {
+			if latest, err := c.storage.runtimeStateKV.Get(ctx, recordKey); err == nil && latest.Revision() == owner.SubscriptionRevision {
 				return nil
 			}
 			if err := c.deleteStalePushEndpointOwner(ctx, ownerKey, entry.Revision()); err != nil {
@@ -335,7 +347,7 @@ func (c *ChattoCore) claimPushEndpointOwnership(ctx context.Context, userID, end
 			continue
 		}
 		if ownerRevision, err := c.storage.runtimeStateKV.Update(ctx, ownerKey, value, entry.Revision()); err == nil {
-			if latest, err := c.storage.runtimeStateKV.Get(ctx, subscriptionKey); err == nil && latest.Revision() == owner.SubscriptionRevision {
+			if latest, err := c.storage.runtimeStateKV.Get(ctx, recordKey); err == nil && latest.Revision() == owner.SubscriptionRevision {
 				return nil
 			}
 			if err := c.deleteStalePushEndpointOwner(ctx, ownerKey, ownerRevision); err != nil {
@@ -395,7 +407,13 @@ func (c *ChattoCore) PushSubscriptionCurrentForUser(ctx context.Context, userID 
 }
 
 func (c *ChattoCore) getPushEndpointOwner(ctx context.Context, endpoint string) (*pushEndpointOwner, error) {
-	entry, err := c.storage.runtimeStateKV.Get(ctx, pushEndpointOwnerKey(endpoint))
+	return c.getPushRecordOwner(ctx, pushEndpointOwnerKey(endpoint))
+}
+
+// getPushRecordOwner returns the owner record at ownerKey, or nil when no
+// account owns the destination.
+func (c *ChattoCore) getPushRecordOwner(ctx context.Context, ownerKey string) (*pushEndpointOwner, error) {
+	entry, err := c.storage.runtimeStateKV.Get(ctx, ownerKey)
 	if errors.Is(err, jetstream.ErrKeyNotFound) {
 		return nil, nil
 	}
@@ -410,15 +428,27 @@ func (c *ChattoCore) getPushEndpointOwner(ctx context.Context, endpoint string) 
 }
 
 func (c *ChattoCore) pushSubscriptionRevisionOwnedByUser(ctx context.Context, userID, endpoint string, subscriptionRevision uint64) (bool, error) {
-	owner, err := c.getPushEndpointOwner(ctx, endpoint)
+	return c.pushRecordRevisionOwnedByUser(ctx, pushEndpointOwnerKey(endpoint), userID, subscriptionRevision)
+}
+
+// pushRecordRevisionOwnedByUser reports whether the owner record at ownerKey
+// assigns the destination to userID at exactly recordRevision.
+func (c *ChattoCore) pushRecordRevisionOwnedByUser(ctx context.Context, ownerKey, userID string, recordRevision uint64) (bool, error) {
+	owner, err := c.getPushRecordOwner(ctx, ownerKey)
 	if err != nil {
 		return false, err
 	}
-	return owner != nil && owner.UserID == userID && owner.SubscriptionRevision == subscriptionRevision, nil
+	return owner != nil && owner.UserID == userID && owner.SubscriptionRevision == recordRevision, nil
 }
 
 func (c *ChattoCore) releasePushEndpointOwnership(ctx context.Context, userID, endpoint string, subscriptionRevision uint64) error {
-	key := pushEndpointOwnerKey(endpoint)
+	return c.releasePushRecordOwnership(ctx, pushEndpointOwnerKey(endpoint), userID, subscriptionRevision)
+}
+
+// releasePushRecordOwnership deletes the owner record at ownerKey when it
+// still assigns the destination to userID at recordRevision. A newer claim
+// stays in place.
+func (c *ChattoCore) releasePushRecordOwnership(ctx context.Context, key, userID string, recordRevision uint64) error {
 	for range pushEndpointOwnerMaxRetries {
 		entry, err := c.storage.runtimeStateKV.Get(ctx, key)
 		if errors.Is(err, jetstream.ErrKeyNotFound) {
@@ -431,7 +461,7 @@ func (c *ChattoCore) releasePushEndpointOwnership(ctx context.Context, userID, e
 		if err := json.Unmarshal(entry.Value(), &owner); err != nil {
 			return fmt.Errorf("failed to unmarshal push endpoint owner: %w", err)
 		}
-		if owner.UserID != userID || owner.SubscriptionRevision != subscriptionRevision {
+		if owner.UserID != userID || owner.SubscriptionRevision != recordRevision {
 			return nil
 		}
 		err = c.storage.runtimeStateKV.Delete(ctx, key, jetstream.LastRevision(entry.Revision()))
@@ -657,8 +687,8 @@ func (c *ChattoCore) deleteExpiredPushSubscription(ctx context.Context, userID, 
 	return nil
 }
 
-// DeleteAllUserPushSubscriptions removes all push subscriptions for a user.
-// Used when a user account is deleted.
+// DeleteAllUserPushSubscriptions removes all browser push subscriptions and
+// all native push devices of a user. Used when a user account is deleted.
 // Authorization: Internal use only - called from user deletion flow.
 func (c *ChattoCore) DeleteAllUserPushSubscriptions(ctx context.Context, userID string) (int, error) {
 	keys, err := listPushRuntimeStateKeys(ctx, c.storage.runtimeStateKV, pushSubscriptionKeyFilter(userID))
@@ -710,6 +740,12 @@ func (c *ChattoCore) DeleteAllUserPushSubscriptions(ctx context.Context, userID 
 		if err == nil {
 			deleted++
 		}
+	}
+
+	nativeDeleted, err := c.deleteAllUserNativePushDevices(ctx, userID)
+	deleted += nativeDeleted
+	if err != nil {
+		cleanupErrors = append(cleanupErrors, err)
 	}
 
 	c.logger.Debug("Deleted all push subscriptions for user",

@@ -310,13 +310,13 @@ describe('app.html metadata', () => {
     expect(colouredPixels).toBe(0);
     expect(data[3]).toBe(0);
 
-    // Eyes, nose, and mouth must remain holes when Android masks the artwork.
+    // The gaps inside the knot must remain holes when Android masks the artwork.
     const alphaAt = (x: number, y: number) => data[(y * info.width + x) * info.channels + 3];
-    expect(alphaAt(28, 57)).toBe(0);
-    expect(alphaAt(68, 57)).toBe(0);
-    expect(alphaAt(48, 51)).toBe(0);
-    expect(alphaAt(48, 70)).toBe(0);
-    expect(alphaAt(48, 40)).toBe(255);
+    expect(alphaAt(48, 48)).toBe(0);
+    expect(alphaAt(48, 20)).toBe(0);
+    expect(alphaAt(48, 76)).toBe(0);
+    expect(alphaAt(48, 10)).toBe(255);
+    expect(alphaAt(10, 48)).toBe(255);
   });
 });
 

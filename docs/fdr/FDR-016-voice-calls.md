@@ -216,6 +216,15 @@ Rooms support real-time voice conversations with optional camera video and scree
   system notification also signals the call. The notification uses the
   operating system's sound and shows only if the member already granted
   notification permission. Chatto does not ask for permission for it.
+- When the server delivers native push, a call start in a direct message also
+  sends an incoming-call push to the native devices of each other member who
+  can join the call, is not in it, and is not in Do Not Disturb. On iOS, the
+  push is a VoIP push that rings through CallKit. On Android, it is a
+  high-priority data message, and the app shows a full-screen call
+  notification. The push is best-effort and expires after 30 seconds.
+- When the call ends, or when a rung member joins the call on any device, the
+  server sends a best-effort call-end push to that member's VoIP and Android
+  devices, so they stop ringing. See FDR-056.
 
 - Joined call participants hear fixed synthesized cues from durable participant join/leave events, including their own join/leave events and other participants in the same active call. These call cues are separate from configurable notification sounds and do not use notification sound filters; `CallEndedEvent` does not play a separate cue.
 - The first join starts a call session, creates fresh per-call E2EE key material, and records durable call lifecycle facts. The final leave ends the call, records the end fact, and shreds the call key.

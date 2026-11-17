@@ -126,6 +126,100 @@ func (*DeleteSubscriptionResponse) Descriptor() ([]byte, []int) {
 	return file_chatto_auth_v1_push_subscription_cleanup_proto_rawDescGZIP(), []int{1}
 }
 
+// Capability-authenticated request to remove an exact native push device.
+type DeleteNativeDeviceRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Device token from the original RegisterNativeDevice request.
+	Token string `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	// Per-save capability supplied with the original RegisterNativeDevice
+	// request. Cleanup is a no-op after any later save replaces this token.
+	CleanupToken  string `protobuf:"bytes,2,opt,name=cleanup_token,json=cleanupToken,proto3" json:"cleanup_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteNativeDeviceRequest) Reset() {
+	*x = DeleteNativeDeviceRequest{}
+	mi := &file_chatto_auth_v1_push_subscription_cleanup_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteNativeDeviceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteNativeDeviceRequest) ProtoMessage() {}
+
+func (x *DeleteNativeDeviceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_chatto_auth_v1_push_subscription_cleanup_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteNativeDeviceRequest.ProtoReflect.Descriptor instead.
+func (*DeleteNativeDeviceRequest) Descriptor() ([]byte, []int) {
+	return file_chatto_auth_v1_push_subscription_cleanup_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *DeleteNativeDeviceRequest) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *DeleteNativeDeviceRequest) GetCleanupToken() string {
+	if x != nil {
+		return x.CleanupToken
+	}
+	return ""
+}
+
+// Response from capability-authenticated native device cleanup.
+// Success does not reveal whether a matching device existed.
+type DeleteNativeDeviceResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteNativeDeviceResponse) Reset() {
+	*x = DeleteNativeDeviceResponse{}
+	mi := &file_chatto_auth_v1_push_subscription_cleanup_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteNativeDeviceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteNativeDeviceResponse) ProtoMessage() {}
+
+func (x *DeleteNativeDeviceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_chatto_auth_v1_push_subscription_cleanup_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteNativeDeviceResponse.ProtoReflect.Descriptor instead.
+func (*DeleteNativeDeviceResponse) Descriptor() ([]byte, []int) {
+	return file_chatto_auth_v1_push_subscription_cleanup_proto_rawDescGZIP(), []int{3}
+}
+
 var File_chatto_auth_v1_push_subscription_cleanup_proto protoreflect.FileDescriptor
 
 const file_chatto_auth_v1_push_subscription_cleanup_proto_rawDesc = "" +
@@ -138,9 +232,16 @@ const file_chatto_auth_v1_push_subscription_cleanup_proto_rawDesc = "" +
 	"\xbaH\ar\x05\x10\x01\x18\x80\x01R\x04auth\x12/\n" +
 	"\rcleanup_token\x18\x03 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10 \x18\x80\x01R\fcleanupToken\"-\n" +
-	"\x1aDeleteSubscriptionResponseJ\x04\b\x01\x10\x02R\tcompleted2\x92\x01\n" +
+	"\x1aDeleteSubscriptionResponseJ\x04\b\x01\x10\x02R\tcompleted\"n\n" +
+	"\x19DeleteNativeDeviceRequest\x12 \n" +
+	"\x05token\x18\x01 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80 R\x05token\x12/\n" +
+	"\rcleanup_token\x18\x02 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10 \x18\x80\x01R\fcleanupToken\"\x1c\n" +
+	"\x1aDeleteNativeDeviceResponse2\x84\x02\n" +
 	"\x1ePushSubscriptionCleanupService\x12p\n" +
-	"\x12DeleteSubscription\x12).chatto.auth.v1.DeleteSubscriptionRequest\x1a*.chatto.auth.v1.DeleteSubscriptionResponse\"\x03\x90\x02\x02B\xd0\x01\n" +
+	"\x12DeleteSubscription\x12).chatto.auth.v1.DeleteSubscriptionRequest\x1a*.chatto.auth.v1.DeleteSubscriptionResponse\"\x03\x90\x02\x02\x12p\n" +
+	"\x12DeleteNativeDevice\x12).chatto.auth.v1.DeleteNativeDeviceRequest\x1a*.chatto.auth.v1.DeleteNativeDeviceResponse\"\x03\x90\x02\x02B\xd0\x01\n" +
 	"\x12com.chatto.auth.v1B\x1cPushSubscriptionCleanupProtoP\x01ZBgithub.com/chattocorp/chatto/cli/internal/pb/chatto/auth/v1;authv1\xa2\x02\x03CAX\xaa\x02\x0eChatto.Auth.V1\xca\x02\x0eChatto\\Auth\\V1\xe2\x02\x1aChatto\\Auth\\V1\\GPBMetadata\xea\x02\x10Chatto::Auth::V1b\x06proto3"
 
 var (
@@ -155,16 +256,20 @@ func file_chatto_auth_v1_push_subscription_cleanup_proto_rawDescGZIP() []byte {
 	return file_chatto_auth_v1_push_subscription_cleanup_proto_rawDescData
 }
 
-var file_chatto_auth_v1_push_subscription_cleanup_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_chatto_auth_v1_push_subscription_cleanup_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_chatto_auth_v1_push_subscription_cleanup_proto_goTypes = []any{
 	(*DeleteSubscriptionRequest)(nil),  // 0: chatto.auth.v1.DeleteSubscriptionRequest
 	(*DeleteSubscriptionResponse)(nil), // 1: chatto.auth.v1.DeleteSubscriptionResponse
+	(*DeleteNativeDeviceRequest)(nil),  // 2: chatto.auth.v1.DeleteNativeDeviceRequest
+	(*DeleteNativeDeviceResponse)(nil), // 3: chatto.auth.v1.DeleteNativeDeviceResponse
 }
 var file_chatto_auth_v1_push_subscription_cleanup_proto_depIdxs = []int32{
 	0, // 0: chatto.auth.v1.PushSubscriptionCleanupService.DeleteSubscription:input_type -> chatto.auth.v1.DeleteSubscriptionRequest
-	1, // 1: chatto.auth.v1.PushSubscriptionCleanupService.DeleteSubscription:output_type -> chatto.auth.v1.DeleteSubscriptionResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
+	2, // 1: chatto.auth.v1.PushSubscriptionCleanupService.DeleteNativeDevice:input_type -> chatto.auth.v1.DeleteNativeDeviceRequest
+	1, // 2: chatto.auth.v1.PushSubscriptionCleanupService.DeleteSubscription:output_type -> chatto.auth.v1.DeleteSubscriptionResponse
+	3, // 3: chatto.auth.v1.PushSubscriptionCleanupService.DeleteNativeDevice:output_type -> chatto.auth.v1.DeleteNativeDeviceResponse
+	2, // [2:4] is the sub-list for method output_type
+	0, // [0:2] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -181,7 +286,7 @@ func file_chatto_auth_v1_push_subscription_cleanup_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_chatto_auth_v1_push_subscription_cleanup_proto_rawDesc), len(file_chatto_auth_v1_push_subscription_cleanup_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

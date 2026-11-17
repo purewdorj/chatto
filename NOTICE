@@ -182,6 +182,16 @@ Mobile Components:
   capacitor-keyboard-license.txt.
 - Capacitor's bundled Cordova compatibility code - Apache License 2.0;
   Copyright The Apache Software Foundation.
+- Capacitor Push Notifications (https://github.com/ionic-team/capacitor-plugins)
+  - MIT License; Copyright 2020-present Ionic. The mobile web bundle includes
+  capacitor-push-notifications-license.txt.
+- AndroidX libraries (https://developer.android.com/jetpack/androidx) - Apache
+  License 2.0; Copyright The Android Open Source Project. Android app only.
+- Firebase Cloud Messaging for Android
+  (https://github.com/firebase/firebase-android-sdk) - Apache License 2.0;
+  Copyright Google LLC. Android app only; it depends on Google Play services
+  libraries under the Android Software Development Kit License.
+- Gradle Wrapper (https://gradle.org/) - Apache License 2.0 (Android build tool)
 
 Desktop Components:
 

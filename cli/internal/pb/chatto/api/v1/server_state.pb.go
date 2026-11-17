@@ -206,8 +206,13 @@ type ServerRuntimeConfig struct {
 	MaxVideoUploadSize int64 `protobuf:"varint,7,opt,name=max_video_upload_size,json=maxVideoUploadSize,proto3" json:"max_video_upload_size,omitempty"`
 	// Message edit window in seconds.
 	MessageEditWindowSeconds int32 `protobuf:"varint,8,opt,name=message_edit_window_seconds,json=messageEditWindowSeconds,proto3" json:"message_edit_window_seconds,omitempty"`
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	// Native push platforms that this server delivers to. Empty when the server
+	// cannot deliver native push. Servers before this field also send it empty.
+	// Native push is independent of Web Push: push_notifications_enabled
+	// describes only Web Push.
+	NativePushPlatforms []NativePushPlatform `protobuf:"varint,9,rep,packed,name=native_push_platforms,json=nativePushPlatforms,proto3,enum=chatto.api.v1.NativePushPlatform" json:"native_push_platforms,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *ServerRuntimeConfig) Reset() {
@@ -288,6 +293,13 @@ func (x *ServerRuntimeConfig) GetMessageEditWindowSeconds() int32 {
 		return x.MessageEditWindowSeconds
 	}
 	return 0
+}
+
+func (x *ServerRuntimeConfig) GetNativePushPlatforms() []NativePushPlatform {
+	if x != nil {
+		return x.NativePushPlatforms
+	}
+	return nil
 }
 
 // Request for authenticated server runtime configuration.
@@ -377,14 +389,14 @@ var File_chatto_api_v1_server_state_proto protoreflect.FileDescriptor
 
 const file_chatto_api_v1_server_state_proto_rawDesc = "" +
 	"\n" +
-	" chatto/api/v1/server_state.proto\x12\rchatto.api.v1\x1a\x1achatto/api/v1/server.proto\"\x19\n" +
+	" chatto/api/v1/server_state.proto\x12\rchatto.api.v1\x1a&chatto/api/v1/push_notifications.proto\x1a\x1achatto/api/v1/server.proto\"\x19\n" +
 	"\x17GetServerProfileRequest\"X\n" +
 	"\x18GetServerProfileResponse\x12<\n" +
 	"\aprofile\x18\x01 \x01(\v2\".chatto.api.v1.ServerPublicProfileR\aprofile\"\x10\n" +
 	"\x0eGetMotdRequest\"3\n" +
 	"\x0fGetMotdResponse\x12\x17\n" +
 	"\x04motd\x18\x01 \x01(\tH\x00R\x04motd\x88\x01\x01B\a\n" +
-	"\x05_motd\"\xc8\x03\n" +
+	"\x05_motd\"\x9f\x04\n" +
 	"\x13ServerRuntimeConfig\x12<\n" +
 	"\x1apush_notifications_enabled\x18\x01 \x01(\bR\x18pushNotificationsEnabled\x12-\n" +
 	"\x10vapid_public_key\x18\x02 \x01(\tH\x00R\x0evapidPublicKey\x88\x01\x01\x12$\n" +
@@ -393,7 +405,8 @@ const file_chatto_api_v1_server_state_proto_rawDesc = "" +
 	"\x18video_processing_enabled\x18\x05 \x01(\bR\x16videoProcessingEnabled\x12&\n" +
 	"\x0fmax_upload_size\x18\x06 \x01(\x03R\rmaxUploadSize\x125\n" +
 	"\x15max_video_upload_size\x18\a \x01(\x03B\x02\x18\x01R\x12maxVideoUploadSize\x12=\n" +
-	"\x1bmessage_edit_window_seconds\x18\b \x01(\x05R\x18messageEditWindowSecondsB\x13\n" +
+	"\x1bmessage_edit_window_seconds\x18\b \x01(\x05R\x18messageEditWindowSeconds\x12U\n" +
+	"\x15native_push_platforms\x18\t \x03(\x0e2!.chatto.api.v1.NativePushPlatformR\x13nativePushPlatformsB\x13\n" +
 	"\x11_vapid_public_keyB\x0e\n" +
 	"\f_livekit_urlJ\x04\b\x04\x10\x05R\x1bdirect_registration_enabled\"\x19\n" +
 	"\x17GetRuntimeConfigRequest\"X\n" +
@@ -427,21 +440,23 @@ var file_chatto_api_v1_server_state_proto_goTypes = []any{
 	(*GetRuntimeConfigRequest)(nil),  // 5: chatto.api.v1.GetRuntimeConfigRequest
 	(*GetRuntimeConfigResponse)(nil), // 6: chatto.api.v1.GetRuntimeConfigResponse
 	(*ServerPublicProfile)(nil),      // 7: chatto.api.v1.ServerPublicProfile
+	(NativePushPlatform)(0),          // 8: chatto.api.v1.NativePushPlatform
 }
 var file_chatto_api_v1_server_state_proto_depIdxs = []int32{
 	7, // 0: chatto.api.v1.GetServerProfileResponse.profile:type_name -> chatto.api.v1.ServerPublicProfile
-	4, // 1: chatto.api.v1.GetRuntimeConfigResponse.runtime:type_name -> chatto.api.v1.ServerRuntimeConfig
-	0, // 2: chatto.api.v1.ServerService.GetServerProfile:input_type -> chatto.api.v1.GetServerProfileRequest
-	2, // 3: chatto.api.v1.ServerService.GetMotd:input_type -> chatto.api.v1.GetMotdRequest
-	5, // 4: chatto.api.v1.ServerService.GetRuntimeConfig:input_type -> chatto.api.v1.GetRuntimeConfigRequest
-	1, // 5: chatto.api.v1.ServerService.GetServerProfile:output_type -> chatto.api.v1.GetServerProfileResponse
-	3, // 6: chatto.api.v1.ServerService.GetMotd:output_type -> chatto.api.v1.GetMotdResponse
-	6, // 7: chatto.api.v1.ServerService.GetRuntimeConfig:output_type -> chatto.api.v1.GetRuntimeConfigResponse
-	5, // [5:8] is the sub-list for method output_type
-	2, // [2:5] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	8, // 1: chatto.api.v1.ServerRuntimeConfig.native_push_platforms:type_name -> chatto.api.v1.NativePushPlatform
+	4, // 2: chatto.api.v1.GetRuntimeConfigResponse.runtime:type_name -> chatto.api.v1.ServerRuntimeConfig
+	0, // 3: chatto.api.v1.ServerService.GetServerProfile:input_type -> chatto.api.v1.GetServerProfileRequest
+	2, // 4: chatto.api.v1.ServerService.GetMotd:input_type -> chatto.api.v1.GetMotdRequest
+	5, // 5: chatto.api.v1.ServerService.GetRuntimeConfig:input_type -> chatto.api.v1.GetRuntimeConfigRequest
+	1, // 6: chatto.api.v1.ServerService.GetServerProfile:output_type -> chatto.api.v1.GetServerProfileResponse
+	3, // 7: chatto.api.v1.ServerService.GetMotd:output_type -> chatto.api.v1.GetMotdResponse
+	6, // 8: chatto.api.v1.ServerService.GetRuntimeConfig:output_type -> chatto.api.v1.GetRuntimeConfigResponse
+	6, // [6:9] is the sub-list for method output_type
+	3, // [3:6] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_chatto_api_v1_server_state_proto_init() }
@@ -449,6 +464,7 @@ func file_chatto_api_v1_server_state_proto_init() {
 	if File_chatto_api_v1_server_state_proto != nil {
 		return
 	}
+	file_chatto_api_v1_push_notifications_proto_init()
 	file_chatto_api_v1_server_proto_init()
 	file_chatto_api_v1_server_state_proto_msgTypes[3].OneofWrappers = []any{}
 	file_chatto_api_v1_server_state_proto_msgTypes[4].OneofWrappers = []any{}

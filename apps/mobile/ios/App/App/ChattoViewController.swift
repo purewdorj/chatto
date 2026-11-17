@@ -1,3 +1,4 @@
+import AudioToolbox
 import AuthenticationServices
 import Capacitor
 import WebKit
@@ -101,7 +102,40 @@ class ChattoViewController: CAPBridgeViewController {
             forMainFrameOnly: true
         )
         webView?.configuration.userContentController.addUserScript(viewportScript)
+        // Native push registration needs the app identity and the APNs
+        // environment that signing selected. The values contain no user data.
+        let appIdentity = WKUserScript(
+            source: """
+            window.chattoNativeApp = Object.freeze({
+                appId: \(Self.jsonString(Bundle.main.bundleIdentifier ?? "")),
+                apnsSandbox: \(Self.usesAPNsSandbox() ? "true" : "false")
+            });
+            """,
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true
+        )
+        webView?.configuration.userContentController.addUserScript(appIdentity)
         bridge?.registerPluginInstance(ChattoAuthorizationPlugin())
+        bridge?.registerPluginInstance(ChattoRingtonePlugin())
+        bridge?.registerPluginInstance(ChattoCallsPlugin())
+    }
+
+    /// Development-signed builds embed a provisioning profile whose
+    /// `aps-environment` is `development`. App Store and TestFlight builds use
+    /// the production APNs environment.
+    private static func usesAPNsSandbox() -> Bool {
+        guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
+              let data = try? Data(contentsOf: url),
+              let text = String(data: data, encoding: .isoLatin1),
+              let key = text.range(of: "<key>aps-environment</key>") else { return false }
+        let rest = text[key.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines)
+        return rest.hasPrefix("<string>development</string>")
+    }
+
+    private static func jsonString(_ value: String) -> String {
+        guard let data = try? JSONSerialization.data(withJSONObject: [value]),
+              let array = String(data: data, encoding: .utf8) else { return "\"\"" }
+        return String(array.dropFirst().dropLast())
     }
 
     /// The static HTML includes the loading UI; server data is not needed here.
@@ -227,5 +261,69 @@ public class ChattoAuthorizationPlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthen
     deinit {
         timeout?.cancel()
         session?.cancel()
+    }
+}
+
+/// Rings an incoming call with a native alert sound. Unlike Web Audio in the
+/// webview, an alert sound needs no user interaction, follows the Ring/Silent
+/// switch, and vibrates when the device settings ask for it, like a phone call.
+/// The ring repeats every three seconds until `stop` or the next `start`.
+@objc(ChattoRingtonePlugin)
+public class ChattoRingtonePlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "ChattoRingtonePlugin"
+    public let jsName = "ChattoRingtone"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "start", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "stop", returnType: CAPPluginReturnPromise)
+    ]
+
+    private static let period: TimeInterval = 3
+    private var soundID: SystemSoundID = 0
+    private var timer: Timer?
+
+    @objc func start(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            self.stopRinging()
+            guard let id = self.loadSound() else {
+                call.reject("The ringtone is not available.")
+                return
+            }
+            AudioServicesPlayAlertSound(id)
+            let timer = Timer(timeInterval: Self.period, repeats: true) { _ in
+                AudioServicesPlayAlertSound(id)
+            }
+            RunLoop.main.add(timer, forMode: .common)
+            self.timer = timer
+            call.resolve()
+        }
+    }
+
+    @objc func stop(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            self.stopRinging()
+            call.resolve()
+        }
+    }
+
+    private func stopRinging() {
+        timer?.invalidate()
+        timer = nil
+    }
+
+    /// The sound is generated at sync time into the bundled web assets.
+    private func loadSound() -> SystemSoundID? {
+        if soundID != 0 { return soundID }
+        guard let url = Bundle.main.url(
+            forResource: "chatto-ringtone", withExtension: "wav", subdirectory: "public"
+        ) else { return nil }
+        var id: SystemSoundID = 0
+        guard AudioServicesCreateSystemSoundID(url as CFURL, &id) == kAudioServicesNoError else { return nil }
+        soundID = id
+        return id
+    }
+
+    deinit {
+        timer?.invalidate()
+        if soundID != 0 { AudioServicesDisposeSystemSoundID(soundID) }
     }
 }

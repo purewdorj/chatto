@@ -26,6 +26,7 @@ import {
   takeLegacyDisabledPushRegistration
 } from './pushRegistrationCoordinator';
 import { notificationPermission } from './pushPermission.svelte';
+import { nativePush } from './nativePushNotifications.svelte';
 import { pushDeviceOptOut } from './pushDeviceOptOut.svelte';
 import {
   BrowserPushRegistrationPaused,
@@ -874,8 +875,16 @@ export async function disablePushOnAllServers(): Promise<void> {
   }
 }
 
-/** Establishes a local or server-side delivery fence before navigation. */
-export function unsubscribeBeforeLeaving(serverId: string): Promise<void> {
+/**
+ * Establishes a local or server-side delivery fence before navigation. In the
+ * mobile apps, this also removes the native push registration.
+ */
+export async function unsubscribeBeforeLeaving(serverId: string): Promise<void> {
+  await nativePush.unsubscribeBeforeLeaving(serverId);
+  return unsubscribeWebPushBeforeLeaving(serverId);
+}
+
+function unsubscribeWebPushBeforeLeaving(serverId: string): Promise<void> {
   savedRegistrations.delete(serverId);
   failedRegistrations.delete(serverId);
   return suspendPushRegistrationBeforeLeaving(serverId, async () => {

@@ -1,18 +1,30 @@
 {
-  "appId": "eu.chattocorp.chatto.mobile",
-  "appName": "Chatto",
+  "appId": "mn.setunari.chatto.mobile",
+  "appName": "Setunari Chat",
   "webDir": "www",
   "loggingBehavior": "none",
   "server": {
     "hostname": "localhost",
-    "iosScheme": "capacitor"
+    "iosScheme": "capacitor",
+    "androidScheme": "https"
   },
   "ios": {
     "contentInset": "never"
   },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": false
+  },
   "plugins": {
     "Keyboard": {
       "resize": "none"
+    },
+    "PushNotifications": {
+      "presentationOptions": ["banner", "sound", "badge"]
+    },
+    "SystemBars": {
+      "insetsHandling": "css",
+      "initialViewportFitValueHint": "cover"
     }
   }
 }

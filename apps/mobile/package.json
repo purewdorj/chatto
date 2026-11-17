@@ -7,12 +7,17 @@
     "check": "node --check scripts/prepare.mjs",
     "sync:ios": "node scripts/prepare.mjs && cap sync ios",
     "open:ios": "cap open ios",
-    "build:ios": "xcodebuild -quiet -project ios/App/App.xcodeproj -scheme Chatto -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath ../../.context/mobile-ios-build CODE_SIGNING_ALLOWED=NO build"
+    "build:ios": "xcodebuild -quiet -project ios/App/App.xcodeproj -scheme Chatto -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath ../../.context/mobile-ios-build CODE_SIGNING_ALLOWED=NO build",
+    "sync:android": "node scripts/prepare.mjs && cap sync android",
+    "open:android": "cap open android",
+    "build:android": "cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
+    "@capacitor/android": "8.5.2",
     "@capacitor/core": "8.5.2",
     "@capacitor/ios": "8.5.2",
-    "@capacitor/keyboard": "8.0.5"
+    "@capacitor/keyboard": "8.0.5",
+    "@capacitor/push-notifications": "8.1.3"
   },
   "devDependencies": {
     "@capacitor/cli": "8.5.2",

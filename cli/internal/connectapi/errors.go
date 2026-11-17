@@ -101,6 +101,7 @@ var connectErrorCodes = []struct {
 		core.ErrLimitExceeded,
 		core.ErrReactionLimitExceeded,
 		core.ErrPushSubscriptionLimitReached,
+		core.ErrNativePushDeviceLimitReached,
 		core.ErrSlowModeActive,
 		core.ErrNeighborLimitReached,
 	}},

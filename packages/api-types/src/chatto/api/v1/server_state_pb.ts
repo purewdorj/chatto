@@ -6,6 +6,7 @@
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
 import { ServerPublicProfile } from "./server_pb.js";
+import { NativePushPlatform } from "./push_notifications_pb.js";
 
 /**
  * Request for the authenticated public server profile.
@@ -211,6 +212,16 @@ export class ServerRuntimeConfig extends Message<ServerRuntimeConfig> {
    */
   messageEditWindowSeconds = 0;
 
+  /**
+   * Native push platforms that this server delivers to. Empty when the server
+   * cannot deliver native push. Servers before this field also send it empty.
+   * Native push is independent of Web Push: push_notifications_enabled
+   * describes only Web Push.
+   *
+   * @generated from field: repeated chatto.api.v1.NativePushPlatform native_push_platforms = 9;
+   */
+  nativePushPlatforms: NativePushPlatform[] = [];
+
   constructor(data?: PartialMessage<ServerRuntimeConfig>) {
     super();
     proto3.util.initPartial(data, this);
@@ -226,6 +237,7 @@ export class ServerRuntimeConfig extends Message<ServerRuntimeConfig> {
     { no: 6, name: "max_upload_size", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 7, name: "max_video_upload_size", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 8, name: "message_edit_window_seconds", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 9, name: "native_push_platforms", kind: "enum", T: proto3.getEnumType(NativePushPlatform), repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ServerRuntimeConfig {

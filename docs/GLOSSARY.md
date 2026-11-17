@@ -143,6 +143,8 @@ another address does not change the selection. See
 
 **Notification Delivery Mode** — Per-cause notification preference with one of four effective values: Off, Unread dot, In-app notification, or Push notification. Unread dot adds only a neutral unread dot. In-app notification creates an in-app item and can play the configured local sound. Push notification also permits push delivery. See [FDR-012](fdr/FDR-012-notifications.md).
 
+**Native Push Device** — One native mobile app installation registered with a server for push through APNs (iOS) or FCM (Android), identified by its provider device token. A device token delivers for only the account that most recently registered it. A device expires 180 days after its most recent save. See [FDR-056](fdr/FDR-056-native-push-notifications.md).
+
 **Push Subscription** — One browser's Web Push registration for one account on one server, stored by that server. Each server has its own subscription in each browser. A subscription expires 180 days after its most recent save; the client saves it again while the device uses Chatto. See [FDR-013](fdr/FDR-013-web-push-notifications.md).
 
 **Message Read Cursor** — Per-user position of the last root message read in a room. It places the New messages separator. It does not create a room dot; notification policy controls room attention separately. See [FDR-012](fdr/FDR-012-notifications.md).

@@ -10,7 +10,9 @@ system. Activity with the Push notification mode can reach them when the Chatto
 tab is not open. Push is on or off per device, always for every registered
 server together: it needs the browser's notification permission, and the user
 can turn it off in Chatto. Push requires operator configuration (VAPID keys) and uses the
-persistent notification system (see FDR-012).
+persistent notification system (see FDR-012). Native mobile apps use APNs and
+FCM instead; see FDR-056. Native push and Web Push are configured
+independently, and one alert delivery covers both.
 
 ## Behavior
 
@@ -184,4 +186,4 @@ and the recipient must still own the subscription.
 ## Related
 
 - **ADRs:** ADR-076 (deterministic notification occurrences), ADR-077 (persistent notification list)
-- **FDRs:** FDR-006 (@Mentions), FDR-012 (Notifications), FDR-027 (PWA & Service Worker)
+- **FDRs:** FDR-006 (@Mentions), FDR-012 (Notifications), FDR-027 (PWA & Service Worker), FDR-056 (Native Push Notifications)

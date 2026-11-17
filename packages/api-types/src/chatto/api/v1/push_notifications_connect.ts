@@ -3,11 +3,13 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { SendTestNotificationRequest, SendTestNotificationResponse, SubscribeRequest, SubscribeResponse, UnsubscribeRequest, UnsubscribeResponse } from "./push_notifications_pb.js";
+import { RegisterNativeDeviceRequest, RegisterNativeDeviceResponse, SendTestNotificationRequest, SendTestNotificationResponse, SubscribeRequest, SubscribeResponse, UnregisterNativeDeviceRequest, UnregisterNativeDeviceResponse, UnsubscribeRequest, UnsubscribeResponse } from "./push_notifications_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 
 /**
- * Browser Web Push subscription commands for the authenticated user.
+ * Push notification device commands for the authenticated user. Browsers
+ * register Web Push subscriptions. Native mobile apps register APNs or FCM
+ * device tokens.
  *
  * @generated from service chatto.api.v1.PushNotificationService
  */
@@ -48,9 +50,11 @@ export const PushNotificationService = {
       idempotency: MethodIdempotency.Idempotent,
     },
     /**
-     * Sends a test notification to the caller's registered browser subscriptions.
-     * Calls are rate-limited per account. Delivery failures return a generic
-     * unavailable error without exposing the push provider's response body.
+     * Sends a test notification to the caller's registered browser
+     * subscriptions and native devices. Calls are rate-limited per account.
+     * The call succeeds when at least one device accepts the notification.
+     * Delivery failures return a generic unavailable error without exposing the
+     * push provider's response body.
      *
      * @generated from rpc chatto.api.v1.PushNotificationService.SendTestNotification
      */
@@ -59,6 +63,50 @@ export const PushNotificationService = {
       I: SendTestNotificationRequest,
       O: SendTestNotificationResponse,
       kind: MethodKind.Unary,
+    },
+    /**
+     * Stores or updates the caller's native mobile push device.
+     *
+     * The server must deliver to the requested platform. Read
+     * ServerRuntimeConfig.native_push_platforms to find the platforms that the
+     * server supports; the call fails with FAILED_PRECONDITION for other
+     * platforms. The app_id must be an app identifier that the server operator
+     * allows; the call fails with INVALID_ARGUMENT for other identifiers.
+     *
+     * A stored device expires 180 days after its most recent save. The client
+     * owns the refresh: call RegisterNativeDevice again when the app starts, at
+     * least once a day while it runs, and when the operating system issues a
+     * new token. The server removes expired devices itself, and it removes a
+     * device when the push service reports that the token is no longer valid.
+     * A device token is active for only the account that most recently
+     * registered it. Call UnregisterNativeDevice to stop delivery before the
+     * device expires.
+     *
+     * Native push sends notification content to Apple or Google in clear text.
+     * The server operator can configure the server to omit message previews.
+     *
+     * @generated from rpc chatto.api.v1.PushNotificationService.RegisterNativeDevice
+     */
+    registerNativeDevice: {
+      name: "RegisterNativeDevice",
+      I: RegisterNativeDeviceRequest,
+      O: RegisterNativeDeviceResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Removes the caller's native push device by device token.
+     *
+     * The call is idempotent: removing an unknown token still succeeds. The call
+     * succeeds also when the server no longer delivers native push.
+     *
+     * @generated from rpc chatto.api.v1.PushNotificationService.UnregisterNativeDevice
+     */
+    unregisterNativeDevice: {
+      name: "UnregisterNativeDevice",
+      I: UnregisterNativeDeviceRequest,
+      O: UnregisterNativeDeviceResponse,
+      kind: MethodKind.Unary,
+      idempotency: MethodIdempotency.Idempotent,
     },
   }
 } as const;

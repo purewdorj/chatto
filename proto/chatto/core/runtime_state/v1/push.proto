@@ -41,3 +41,75 @@ message PushSubscription {
   // relying on whichever account session is current when its request settles.
   string cleanup_token = 7;
 }
+
+// Push service that delivers to a native mobile push device.
+enum NativePushDevicePlatform {
+  NATIVE_PUSH_DEVICE_PLATFORM_UNSPECIFIED = 0;
+  // Apple Push Notification service.
+  NATIVE_PUSH_DEVICE_PLATFORM_APNS = 1;
+  // Firebase Cloud Messaging.
+  NATIVE_PUSH_DEVICE_PLATFORM_FCM = 2;
+  // APNs VoIP (PushKit). Receives only call pushes on the topic
+  // "<app_id>.voip".
+  NATIVE_PUSH_DEVICE_PLATFORM_APNS_VOIP = 3;
+}
+
+/*
+   NativePushDevice stores the registration of a native mobile app installation
+   for push delivery through APNs or FCM.
+
+   Devices are stored in the RUNTIME_STATE KV bucket with key format:
+   native_push_device.{userId}.{tokenHash}
+
+   The tokenHash is the first 16 hex characters of the SHA-256 hash of the
+   provider device token. A separate native_push_device_owner.{fullTokenHash}
+   claim makes the exact current record active for only one account.
+*/
+message NativePushDevice {
+  // Push service that delivers to the device.
+  NativePushDevicePlatform platform = 1;
+
+  // Provider device token: the APNs device token or the FCM registration
+  // token. Secret delivery credential; never log it.
+  string token = 2;
+
+  // App identifier: the iOS bundle ID (APNs topic) or the Android package name.
+  string app_id = 3;
+
+  // True when the APNs or APNs VoIP token belongs to the APNs development
+  // environment.
+  bool apns_sandbox = 4;
+
+  // Optional device name for device identification.
+  string device_name = 5;
+
+  // Time of the most recent save. Every save overwrites this value. The record
+  // expires PushSubscriptionLifetime after this time; a record without this
+  // value is expired.
+  google.protobuf.Timestamp saved_at = 6;
+
+  // Random per-save capability used to remove a cancelled registration without
+  // an account session.
+  string cleanup_token = 7;
+}
+
+/*
+   CallRing records that the server sent an incoming-call push to one account
+   for one call. The server uses it to send a "call_end" push that stops the
+   ring on the other devices of the account when the call ends or when the
+   account joins the call. Removal of the record claims the "call_end" push,
+   so only one replica sends it.
+
+   Rings are stored in the RUNTIME_STATE KV bucket with key format:
+   call_ring.{callId}.{recipientUserId}
+
+   Each record has a short per-key TTL, because a ring is useful only for a
+   short time.
+*/
+message CallRing {
+  // Room of the call.
+  string room_id = 1;
+
+  // Time when the server recorded the ring, immediately before the push.
+  google.protobuf.Timestamp rung_at = 2;
+}

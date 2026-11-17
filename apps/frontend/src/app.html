@@ -233,8 +233,13 @@
 
         // Restore motion, accent, depth, and contrast before CSS loads.
         // Keep this allowlist aligned with lib/state/userPreferences.svelte.ts.
-        // The iOS shell serves its bundled page through this native-only scheme.
-        const defaultDepth = location.protocol === 'capacitor:' ? 0 : 50;
+        // Native mobile apps start flat. The iOS shell serves its bundled page
+        // through a native-only scheme; the native bridge script, which runs
+        // before page scripts, identifies the Android shell.
+        const defaultDepth =
+          location.protocol === 'capacitor:' || window.Capacitor?.isNativePlatform?.() === true
+            ? 0
+            : 50;
         let stored = {};
         try {
           stored = JSON.parse(localStorage.getItem('chatto:preferences') ?? '{}') ?? {};

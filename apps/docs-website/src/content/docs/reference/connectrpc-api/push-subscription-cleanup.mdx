@@ -18,7 +18,8 @@ Shared message and enum definitions are documented in [Shared Types And Enums](/
 
 ## PushSubscriptionCleanupService
 
-Public capability-authenticated cleanup for browser push subscriptions.
+Public capability-authenticated cleanup for browser push subscriptions and
+native push devices.
 
 <a id="chatto-auth-v1-PushSubscriptionCleanupService-DeleteSubscription"></a>
 
@@ -52,3 +53,36 @@ Capability-authenticated request to remove an exact push subscription.
 
 Response from capability-authenticated subscription cleanup.
 Success does not reveal whether a matching subscription existed.
+
+
+<a id="chatto-auth-v1-PushSubscriptionCleanupService-DeleteNativeDevice"></a>
+
+### DeleteNativeDevice
+
+Removes the exact current native push device when its device token and
+per-save cleanup token match. This public RPC requires those capabilities,
+not an authenticated account session, and does not reveal whether a match
+existed.
+
+```http
+POST /api/connect/chatto.auth.v1.PushSubscriptionCleanupService/DeleteNativeDevice
+```
+
+<a id="chatto-auth-v1-DeleteNativeDeviceRequest"></a>
+
+#### Input: DeleteNativeDeviceRequest
+
+Capability-authenticated request to remove an exact native push device.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `token` | `string` | Device token from the original RegisterNativeDevice request. |
+| `cleanup_token` | `string` | Per-save capability supplied with the original RegisterNativeDevice request. Cleanup is a no-op after any later save replaces this token. |
+
+
+<a id="chatto-auth-v1-DeleteNativeDeviceResponse"></a>
+
+#### Result: DeleteNativeDeviceResponse
+
+Response from capability-authenticated native device cleanup.
+Success does not reveal whether a matching device existed.

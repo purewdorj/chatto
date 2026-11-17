@@ -1,11 +1,11 @@
 ---
-title: Notifications & Web Push
-description: Configure Web Push with VAPID keys and test notification delivery.
+title: Notifications & Push
+description: Configure browser Web Push with VAPID keys, native mobile push with APNs and FCM, and test notification delivery.
 ---
 
 import { CardGrid, LinkCard, Tabs, TabItem } from "@astrojs/starlight/components";
 
-Chatto has persistent in-app notifications and optional browser Web Push. Operators configure whether push is available; members decide which rooms, threads, and devices should alert them.
+Chatto has persistent in-app notifications, optional browser Web Push, and optional native push to mobile apps through Apple Push Notification service (APNs) and Firebase Cloud Messaging (FCM). Operators configure which push transports are available; members decide which rooms, threads, and devices should alert them. Each transport works without the others.
 
 ## Notification Policy
 
@@ -87,10 +87,101 @@ provider access from the server. Keep the service worker reachable through the
 reverse proxy. Use **Try Again** in notification settings if browser subscription
 setup has paused.
 
+## Enable Native Mobile Push
+
+Native mobile apps receive notifications through APNs (iOS) and FCM (Android),
+not through Web Push. Configure each provider that your mobile apps use. You
+need the credentials of the developer account or Firebase project that signs
+the app. A server can deliver only to the app identifiers that you list.
+
+Native push also rings the other members of a direct message when a call
+starts there. It sends this alert only to native apps.
+
+<Tabs>
+<TabItem label="TOML">
+
+```toml
+[push.apns]
+enabled = true
+team_id = "ABCDE12345"              # Apple Developer Team ID
+key_id = "KEY1234567"               # ID of the APNs authentication key
+private_key_file = "/run/secrets/apns-key.p8"
+topics = ["com.example.chatto"]     # iOS bundle IDs
+# include_previews = false          # send generic text to Apple
+
+[push.fcm]
+enabled = true
+service_account_file = "/run/secrets/firebase-service-account.json"
+app_ids = ["com.example.chatto"]    # Android package names
+# project_id = "my-firebase-project" # default: project_id in the key file
+# include_previews = false          # send generic text to Google
+```
+
+</TabItem>
+<TabItem label="Environment">
+
+```bash
+CHATTO_PUSH_APNS_ENABLED=true
+CHATTO_PUSH_APNS_TEAM_ID=ABCDE12345
+CHATTO_PUSH_APNS_KEY_ID=KEY1234567
+CHATTO_PUSH_APNS_PRIVATE_KEY_FILE=/run/secrets/apns-key.p8
+CHATTO_PUSH_APNS_TOPICS=com.example.chatto
+
+CHATTO_PUSH_FCM_ENABLED=true
+CHATTO_PUSH_FCM_SERVICE_ACCOUNT_FILE=/run/secrets/firebase-service-account.json
+CHATTO_PUSH_FCM_APP_IDS=com.example.chatto
+```
+
+</TabItem>
+</Tabs>
+
+1. For APNs, create an APNs authentication key (`.p8`) in your Apple Developer
+   account. Use its key ID and your Team ID. One key works for the production
+   and development environments. List only the bundle ID in `topics`, not the
+   `.voip` topic: Chatto sends incoming calls to iOS apps as VoIP pushes on
+   `<bundle ID>.voip` with the same key.
+2. For FCM, create a service account key in the Firebase console
+   (**Project settings > Service accounts**). The key must allow Firebase Cloud
+   Messaging.
+3. Set either the key file path or the inline key (`private_key` or
+   `service_account_json`), not both. Keep the keys secret.
+4. Set `webserver.url`. Native pushes contain links to it.
+
+Chatto reads and checks the keys at startup. If a key is missing or unusable,
+the server does not start.
+
+### Privacy
+
+APNs and FCM are external systems that the operator does not control. Native
+push does not encrypt the notification content for the device, as Web Push
+does:
+
+- Apple (`api.push.apple.com`, `api.sandbox.push.apple.com`) receives the
+  device token, the bundle ID, the title and text of each notification, and
+  the server's IP address.
+- Google (`fcm.googleapis.com` and `oauth2.googleapis.com`) receives the
+  registration token, the package name, the title and text of each
+  notification, the service account identity, and the server's IP address.
+
+Titles contain sender and room names, and the text contains a message preview
+of up to 100 characters. Set `include_previews = false` for a provider to send
+only "New notification" or "Incoming call" through it. Notifications always
+contain opaque IDs and the server URL, but no message text.
+
+### Troubleshooting
+
+- Registrations fail with `FAILED_PRECONDITION` when the platform is not
+  enabled, and with `INVALID_ARGUMENT` when the app identifier is not in
+  `topics` or `app_ids`.
+- Chatto removes a device when APNs or FCM reports that its token is no
+  longer valid. The app registers it again the next time it starts.
+- Use **Send test notification** in the app to test delivery. Server logs
+  show the provider status and error code, but never device tokens.
+
 ## Operator Checklist
 
 1. Set `webserver.url` to the public HTTPS origin.
-2. Enable Web Push with stable VAPID keys.
+2. Enable Web Push with stable VAPID keys, native push with APNs and FCM keys, or both.
 3. Keep the service worker path reachable through your proxy.
 4. Test from a normal member account, not only an owner account.
 5. Test one desktop browser and one mobile installed PWA if mobile push matters.
@@ -103,6 +194,6 @@ setup has paused.
   <LinkCard title="Security & Privacy" href="/guides/operations/security/" description="Session, CORS, WebSocket, and runtime-state security details." />
   <LinkCard title="Notification APIs" href="/reference/connectrpc-api/notifications/" description="Public ConnectRPC notification service reference." />
   <LinkCard title="Notification Policy APIs" href="/reference/connectrpc-api/notification-policies/" description="Scoped server, room-group, and room policy service reference." />
-  <LinkCard title="Push Notification APIs" href="/reference/connectrpc-api/push-notifications/" description="Authenticated Web Push subscription service reference." />
+  <LinkCard title="Push Notification APIs" href="/reference/connectrpc-api/push-notifications/" description="Authenticated Web Push subscription and native device service reference." />
   <LinkCard title="Push Subscription Cleanup API" href="/reference/connectrpc-api/push-subscription-cleanup/" description="Capability-authenticated cleanup service reference." />
 </CardGrid>

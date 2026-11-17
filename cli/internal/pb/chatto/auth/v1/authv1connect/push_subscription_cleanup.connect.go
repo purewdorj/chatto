@@ -37,6 +37,9 @@ const (
 	// PushSubscriptionCleanupServiceDeleteSubscriptionProcedure is the fully-qualified name of the
 	// PushSubscriptionCleanupService's DeleteSubscription RPC.
 	PushSubscriptionCleanupServiceDeleteSubscriptionProcedure = "/chatto.auth.v1.PushSubscriptionCleanupService/DeleteSubscription"
+	// PushSubscriptionCleanupServiceDeleteNativeDeviceProcedure is the fully-qualified name of the
+	// PushSubscriptionCleanupService's DeleteNativeDevice RPC.
+	PushSubscriptionCleanupServiceDeleteNativeDeviceProcedure = "/chatto.auth.v1.PushSubscriptionCleanupService/DeleteNativeDevice"
 )
 
 // PushSubscriptionCleanupServiceClient is a client for the
@@ -47,6 +50,11 @@ type PushSubscriptionCleanupServiceClient interface {
 	// not an authenticated account session, and does not reveal whether a match
 	// existed.
 	DeleteSubscription(context.Context, *connect.Request[v1.DeleteSubscriptionRequest]) (*connect.Response[v1.DeleteSubscriptionResponse], error)
+	// Removes the exact current native push device when its device token and
+	// per-save cleanup token match. This public RPC requires those capabilities,
+	// not an authenticated account session, and does not reveal whether a match
+	// existed.
+	DeleteNativeDevice(context.Context, *connect.Request[v1.DeleteNativeDeviceRequest]) (*connect.Response[v1.DeleteNativeDeviceResponse], error)
 }
 
 // NewPushSubscriptionCleanupServiceClient constructs a client for the
@@ -68,17 +76,30 @@ func NewPushSubscriptionCleanupServiceClient(httpClient connect.HTTPClient, base
 			connect.WithIdempotency(connect.IdempotencyIdempotent),
 			connect.WithClientOptions(opts...),
 		),
+		deleteNativeDevice: connect.NewClient[v1.DeleteNativeDeviceRequest, v1.DeleteNativeDeviceResponse](
+			httpClient,
+			baseURL+PushSubscriptionCleanupServiceDeleteNativeDeviceProcedure,
+			connect.WithSchema(pushSubscriptionCleanupServiceMethods.ByName("DeleteNativeDevice")),
+			connect.WithIdempotency(connect.IdempotencyIdempotent),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // pushSubscriptionCleanupServiceClient implements PushSubscriptionCleanupServiceClient.
 type pushSubscriptionCleanupServiceClient struct {
 	deleteSubscription *connect.Client[v1.DeleteSubscriptionRequest, v1.DeleteSubscriptionResponse]
+	deleteNativeDevice *connect.Client[v1.DeleteNativeDeviceRequest, v1.DeleteNativeDeviceResponse]
 }
 
 // DeleteSubscription calls chatto.auth.v1.PushSubscriptionCleanupService.DeleteSubscription.
 func (c *pushSubscriptionCleanupServiceClient) DeleteSubscription(ctx context.Context, req *connect.Request[v1.DeleteSubscriptionRequest]) (*connect.Response[v1.DeleteSubscriptionResponse], error) {
 	return c.deleteSubscription.CallUnary(ctx, req)
+}
+
+// DeleteNativeDevice calls chatto.auth.v1.PushSubscriptionCleanupService.DeleteNativeDevice.
+func (c *pushSubscriptionCleanupServiceClient) DeleteNativeDevice(ctx context.Context, req *connect.Request[v1.DeleteNativeDeviceRequest]) (*connect.Response[v1.DeleteNativeDeviceResponse], error) {
+	return c.deleteNativeDevice.CallUnary(ctx, req)
 }
 
 // PushSubscriptionCleanupServiceHandler is an implementation of the
@@ -89,6 +110,11 @@ type PushSubscriptionCleanupServiceHandler interface {
 	// not an authenticated account session, and does not reveal whether a match
 	// existed.
 	DeleteSubscription(context.Context, *connect.Request[v1.DeleteSubscriptionRequest]) (*connect.Response[v1.DeleteSubscriptionResponse], error)
+	// Removes the exact current native push device when its device token and
+	// per-save cleanup token match. This public RPC requires those capabilities,
+	// not an authenticated account session, and does not reveal whether a match
+	// existed.
+	DeleteNativeDevice(context.Context, *connect.Request[v1.DeleteNativeDeviceRequest]) (*connect.Response[v1.DeleteNativeDeviceResponse], error)
 }
 
 // NewPushSubscriptionCleanupServiceHandler builds an HTTP handler from the service implementation.
@@ -105,10 +131,19 @@ func NewPushSubscriptionCleanupServiceHandler(svc PushSubscriptionCleanupService
 		connect.WithIdempotency(connect.IdempotencyIdempotent),
 		connect.WithHandlerOptions(opts...),
 	)
+	pushSubscriptionCleanupServiceDeleteNativeDeviceHandler := connect.NewUnaryHandler(
+		PushSubscriptionCleanupServiceDeleteNativeDeviceProcedure,
+		svc.DeleteNativeDevice,
+		connect.WithSchema(pushSubscriptionCleanupServiceMethods.ByName("DeleteNativeDevice")),
+		connect.WithIdempotency(connect.IdempotencyIdempotent),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/chatto.auth.v1.PushSubscriptionCleanupService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PushSubscriptionCleanupServiceDeleteSubscriptionProcedure:
 			pushSubscriptionCleanupServiceDeleteSubscriptionHandler.ServeHTTP(w, r)
+		case PushSubscriptionCleanupServiceDeleteNativeDeviceProcedure:
+			pushSubscriptionCleanupServiceDeleteNativeDeviceHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -120,4 +155,8 @@ type UnimplementedPushSubscriptionCleanupServiceHandler struct{}
 
 func (UnimplementedPushSubscriptionCleanupServiceHandler) DeleteSubscription(context.Context, *connect.Request[v1.DeleteSubscriptionRequest]) (*connect.Response[v1.DeleteSubscriptionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chatto.auth.v1.PushSubscriptionCleanupService.DeleteSubscription is not implemented"))
+}
+
+func (UnimplementedPushSubscriptionCleanupServiceHandler) DeleteNativeDevice(context.Context, *connect.Request[v1.DeleteNativeDeviceRequest]) (*connect.Response[v1.DeleteNativeDeviceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chatto.auth.v1.PushSubscriptionCleanupService.DeleteNativeDevice is not implemented"))
 }

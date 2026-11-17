@@ -35,7 +35,8 @@ const (
 )
 
 // pushSubscriptionCleanupModel turns the existing UserAccountDeleted domain
-// fact into recoverable physical removal of Web Push credentials. The durable
+// fact into recoverable physical removal of Web Push credentials and native
+// push device tokens. The durable
 // consumer handles the normal path. One leased startup/periodic pass scans the
 // current subscription and owner keyspaces once, using the permanent EVT fact
 // as its fence, to repair late writes, old partial failures, and orphaned owner
@@ -163,9 +164,16 @@ func (m *pushSubscriptionCleanupModel) reconcileDeletedAccountPushState(ctx cont
 	if err != nil {
 		return fmt.Errorf("list push subscriptions during account reconciliation: %w", err)
 	}
-	for _, key := range subscriptionKeys {
+	nativeDeviceKeys, err := listPushRuntimeStateKeys(ctx, m.core.storage.runtimeStateKV, nativePushDeviceKeyPrefix+">")
+	if err != nil {
+		return fmt.Errorf("list native push devices during account reconciliation: %w", err)
+	}
+	for _, key := range append(subscriptionKeys, nativeDeviceKeys...) {
 		subscriptionsScanned++
 		userID := extractUserIDFromPushKey(key)
+		if userID == "" {
+			userID = extractUserIDFromNativePushKey(key)
+		}
 		if userID == "" {
 			cleanupErrors = append(cleanupErrors, fmt.Errorf("invalid push subscription key during account reconciliation"))
 			continue
@@ -192,9 +200,18 @@ func (m *pushSubscriptionCleanupModel) reconcileDeletedAccountPushState(ctx cont
 		cleanupErrors = append(cleanupErrors, fmt.Errorf("list push endpoint owners during account reconciliation: %w", err))
 		return errors.Join(cleanupErrors...)
 	}
-	for _, key := range ownerKeys {
+	nativeOwnerKeys, err := listPushRuntimeStateKeys(ctx, m.core.storage.runtimeStateKV, nativePushDeviceOwnerKeyPrefix+">")
+	if err != nil {
+		cleanupErrors = append(cleanupErrors, fmt.Errorf("list native push device owners during account reconciliation: %w", err))
+		return errors.Join(cleanupErrors...)
+	}
+	for _, key := range append(ownerKeys, nativeOwnerKeys...) {
 		ownersScanned++
-		userID, ownerRevision, remove, err := m.inspectPushEndpointOwner(ctx, key, deletedAccounts)
+		inspect := m.inspectPushEndpointOwner
+		if strings.HasPrefix(key, nativePushDeviceOwnerKeyPrefix) {
+			inspect = m.inspectNativePushDeviceOwner
+		}
+		userID, ownerRevision, remove, err := inspect(ctx, key, deletedAccounts)
 		if err != nil {
 			cleanupErrors = append(cleanupErrors, err)
 			continue
@@ -277,6 +294,54 @@ func (m *pushSubscriptionCleanupModel) inspectPushEndpointOwner(
 		return owner.UserID, entry.Revision(), true, nil
 	}
 	if subscriptionEntry.Revision() != owner.SubscriptionRevision || pushEndpointOwnerKey(subscription.GetEndpoint()) != key {
+		return owner.UserID, entry.Revision(), true, nil
+	}
+	deleted, err := m.accountDeleted(ctx, owner.UserID, deletedAccounts)
+	if err != nil {
+		return owner.UserID, entry.Revision(), false, err
+	}
+	return owner.UserID, entry.Revision(), deleted, nil
+}
+
+// inspectNativePushDeviceOwner reports whether a native device owner record
+// should be removed. It treats malformed, orphaned, stale-revision, and
+// deleted-account owners as invalid. The device key is reconstructed from the
+// stored user ID and the token hash in the owner key.
+func (m *pushSubscriptionCleanupModel) inspectNativePushDeviceOwner(
+	ctx context.Context,
+	key string,
+	deletedAccounts map[string]bool,
+) (userID string, revision uint64, remove bool, err error) {
+	entry, err := m.core.storage.runtimeStateKV.Get(ctx, key)
+	if errors.Is(err, jetstream.ErrKeyNotFound) {
+		return "", 0, false, nil
+	}
+	if err != nil {
+		return "", 0, false, fmt.Errorf("get native push device owner during account reconciliation: %w", err)
+	}
+	var owner pushEndpointOwner
+	if err := json.Unmarshal(entry.Value(), &owner); err != nil || owner.UserID == "" || owner.SubscriptionRevision == 0 {
+		return "", entry.Revision(), true, nil
+	}
+	fullHash := strings.TrimPrefix(key, nativePushDeviceOwnerKeyPrefix)
+	if len(fullHash) != sha256HexLength {
+		return owner.UserID, entry.Revision(), true, nil
+	}
+	if _, err := hex.DecodeString(fullHash); err != nil {
+		return owner.UserID, entry.Revision(), true, nil
+	}
+	deviceEntry, err := m.core.storage.runtimeStateKV.Get(ctx, nativePushDeviceKeyFromHash(owner.UserID, fullHash))
+	if errors.Is(err, jetstream.ErrKeyNotFound) {
+		return owner.UserID, entry.Revision(), true, nil
+	}
+	if err != nil {
+		return owner.UserID, entry.Revision(), false, fmt.Errorf("get native push device for owner reconciliation: %w", err)
+	}
+	var device runtimestatev1.NativePushDevice
+	if err := proto.Unmarshal(deviceEntry.Value(), &device); err != nil {
+		return owner.UserID, entry.Revision(), true, nil
+	}
+	if deviceEntry.Revision() != owner.SubscriptionRevision || m.core.nativePushDeviceOwnerKey(device.GetToken()) != key {
 		return owner.UserID, entry.Revision(), true, nil
 	}
 	deleted, err := m.accountDeleted(ctx, owner.UserID, deletedAccounts)

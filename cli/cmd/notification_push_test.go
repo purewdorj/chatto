@@ -45,7 +45,7 @@ func TestNotificationPushCustomDomain(t *testing.T) {
 			URL:            "https://official.example.test",
 			AllowedOrigins: []string{"https://custom.example.test", "*"},
 		},
-	}, sender, log.New(io.Discard))
+	}, sender, nil, log.New(io.Discard))
 	if err := handler(ctx, occurrence); err != nil {
 		t.Fatal(err)
 	}
@@ -182,7 +182,7 @@ func TestNotificationAlertHandlerCompletesWhenAnyCurrentDeviceAccepts(t *testing
 	}}
 	handler := notificationAlertHandler(chattoCore, config.ChattoConfig{
 		Webserver: config.WebserverConfig{URL: "https://chat.example.test"},
-	}, sender, log.New(io.Discard))
+	}, sender, nil, log.New(io.Discard))
 
 	if err := handler(ctx, occurrence); err != nil {
 		t.Fatalf("notification alert handler: %v", err)
@@ -227,7 +227,7 @@ func TestNotificationAlertHandlerRevalidatesDNDAndReadState(t *testing.T) {
 			t.Fatal("DND handler contacted provider")
 			return nil
 		}}
-		err := notificationAlertHandler(chattoCore, config.ChattoConfig{}, sender, log.New(io.Discard))(ctx, occurrence)
+		err := notificationAlertHandler(chattoCore, config.ChattoConfig{}, sender, nil, log.New(io.Discard))(ctx, occurrence)
 		if !errors.Is(err, core.ErrNotificationAlertSuppressed) || sender.calls != 0 {
 			t.Fatalf("DND handler = (%v, %d calls), want suppressed without provider", err, sender.calls)
 		}
@@ -245,7 +245,7 @@ func TestNotificationAlertHandlerRevalidatesDNDAndReadState(t *testing.T) {
 			t.Fatal("read occurrence contacted provider")
 			return nil
 		}}
-		err := notificationAlertHandler(chattoCore, config.ChattoConfig{}, sender, log.New(io.Discard))(ctx, occurrence)
+		err := notificationAlertHandler(chattoCore, config.ChattoConfig{}, sender, nil, log.New(io.Discard))(ctx, occurrence)
 		if !errors.Is(err, core.ErrNotificationAlertSuppressed) {
 			t.Fatalf("read handler = %v, want suppressed", err)
 		}
@@ -272,7 +272,7 @@ func TestNotificationAlertHandlerRevalidatesDNDAndReadState(t *testing.T) {
 			t.Fatal("policy-downgraded occurrence contacted provider")
 			return nil
 		}}
-		err := notificationAlertHandler(chattoCore, config.ChattoConfig{}, sender, log.New(io.Discard))(ctx, occurrence)
+		err := notificationAlertHandler(chattoCore, config.ChattoConfig{}, sender, nil, log.New(io.Discard))(ctx, occurrence)
 		if !errors.Is(err, core.ErrNotificationAlertSuppressed) || sender.calls != 0 {
 			t.Fatalf("policy-downgraded handler = (%v, %d calls), want suppressed without provider", err, sender.calls)
 		}
@@ -292,7 +292,7 @@ func TestNotificationAlertHandlerRejectsTransferredEndpoint(t *testing.T) {
 		t.Fatal("transferred endpoint contacted provider")
 		return nil
 	}}
-	err := notificationAlertHandler(chattoCore, config.ChattoConfig{}, sender, log.New(io.Discard))(ctx, occurrence)
+	err := notificationAlertHandler(chattoCore, config.ChattoConfig{}, sender, nil, log.New(io.Discard))(ctx, occurrence)
 	if !errors.Is(err, core.ErrNotificationAlertSuppressed) || sender.calls != 0 {
 		t.Fatalf("transferred handler = (%v, %d calls), want suppressed without provider", err, sender.calls)
 	}

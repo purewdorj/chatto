@@ -62,6 +62,7 @@ func serverRuntimeConfig(api *API) *apiv1.ServerRuntimeConfig {
 		MaxUploadSize:            maxUploadSize,
 		MaxVideoUploadSize:       maxUploadSize,
 		MessageEditWindowSeconds: int32(core.MessageEditWindow / time.Second),
+		NativePushPlatforms:      nativePushPlatforms(api.config.Push),
 	}
 	if api.config.Push.IsConfigured() {
 		runtime.VapidPublicKey = new(api.config.Push.VAPIDPublicKey)

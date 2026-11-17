@@ -9,6 +9,7 @@ import {
   type PublicServerInfo
 } from '../api/server.js';
 import type { ServerPublicProfile } from '@chatto/api-types/api/v1/server_pb';
+import type { NativePushPlatform } from '@chatto/api-types/api/v1/push_notifications_pb';
 import type { ProjectedServerState } from './projection.js';
 import {
   evaluateServerCompatibility,
@@ -164,6 +165,15 @@ export class ServerInfoState {
   /** Public VAPID key for Web Push subscriptions. */
   get vapidPublicKey(): string | null {
     return this.#runtime?.vapidPublicKey ?? null;
+  }
+
+  /**
+   * Native mobile push services (APNs, FCM) through which this server can
+   * deliver notifications. Empty when the server cannot deliver native push,
+   * including servers released before native push.
+   */
+  get nativePushPlatforms(): readonly NativePushPlatform[] {
+    return this.#runtime?.nativePushPlatforms ?? [];
   }
 
   /** LiveKit URL for voice and video calls, or null when calls are not set up. */

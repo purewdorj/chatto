@@ -4,13 +4,22 @@ package chatto.auth.v1;
 
 import "buf/validate/validate.proto";
 
-// Public capability-authenticated cleanup for browser push subscriptions.
+// Public capability-authenticated cleanup for browser push subscriptions and
+// native push devices.
 service PushSubscriptionCleanupService {
   // Removes the exact current subscription when its Push API auth secret and
   // per-save cleanup token match. This public RPC requires those capabilities,
   // not an authenticated account session, and does not reveal whether a match
   // existed.
   rpc DeleteSubscription(DeleteSubscriptionRequest) returns (DeleteSubscriptionResponse) {
+    option idempotency_level = IDEMPOTENT;
+  }
+
+  // Removes the exact current native push device when its device token and
+  // per-save cleanup token match. This public RPC requires those capabilities,
+  // not an authenticated account session, and does not reveal whether a match
+  // existed.
+  rpc DeleteNativeDevice(DeleteNativeDeviceRequest) returns (DeleteNativeDeviceResponse) {
     option idempotency_level = IDEMPOTENT;
   }
 }
@@ -44,3 +53,23 @@ message DeleteSubscriptionResponse {
   reserved 1;
   reserved "completed";
 }
+
+// Capability-authenticated request to remove an exact native push device.
+message DeleteNativeDeviceRequest {
+  // Device token from the original RegisterNativeDevice request.
+  string token = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 4096
+  }];
+
+  // Per-save capability supplied with the original RegisterNativeDevice
+  // request. Cleanup is a no-op after any later save replaces this token.
+  string cleanup_token = 2 [(buf.validate.field).string = {
+    min_len: 32
+    max_len: 128
+  }];
+}
+
+// Response from capability-authenticated native device cleanup.
+// Success does not reveal whether a matching device existed.
+message DeleteNativeDeviceResponse {}

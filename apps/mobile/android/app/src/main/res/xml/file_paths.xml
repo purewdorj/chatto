@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The WebView file chooser stores camera captures in the app's external
+     Pictures directory. Share only that directory with the camera app. -->
+<paths>
+    <external-files-path name="captures" path="Pictures/" />
+</paths>

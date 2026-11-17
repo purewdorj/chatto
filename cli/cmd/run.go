@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -203,8 +204,12 @@ func runServer(configPath string) {
 		return
 	}
 
-	// Set up push notification callback if push is enabled
-	setupPushNotifications(chattoCore, cfg)
+	// Set up push notification callbacks if Web Push or native push is enabled
+	if err := setupPushNotifications(chattoCore, cfg); err != nil {
+		log.Error("Failed to configure push notifications", "error", err)
+		exitCode = 1
+		return
+	}
 
 	// Start core's background services (PresenceHub + projectors) BEFORE
 	// bootstrap. Bootstrap triggers JoinRoom, which calls WaitForSeq on
@@ -402,36 +407,76 @@ func setLogLevel(level string) {
 	}
 }
 
-// setupPushNotifications configures the push notification callback if push is enabled.
-func setupPushNotifications(chattoCore *core.ChattoCore, cfg config.ChattoConfig) {
-	if !cfg.Push.IsConfigured() {
-		return
-	}
-
+// setupPushNotifications configures the push notification callbacks when
+// Web Push, native push, or both are enabled. It returns an error when an
+// enabled native provider has unusable key material.
+func setupPushNotifications(chattoCore *core.ChattoCore, cfg config.ChattoConfig) error {
 	logger := log.WithPrefix("push")
-	sender := push.NewSender(cfg.Push, logger)
-	if sender == nil {
-		return
+	var webSender notificationPushSender
+	if cfg.Push.IsConfigured() {
+		if sender := push.NewSender(cfg.Push, logger); sender != nil {
+			webSender = sender
+		}
+	}
+	var nativeSender nativePushSender
+	native, err := push.NewNativeSender(cfg.Push, logger)
+	if err != nil {
+		return err
+	}
+	if native != nil {
+		nativeSender = native
+	}
+	if webSender == nil && nativeSender == nil {
+		return nil
 	}
 
-	logger.Info("Push notifications enabled")
+	logger.Info("Push notifications enabled",
+		"web_push", webSender != nil,
+		"apns", cfg.Push.APNs.Enabled,
+		"fcm", cfg.Push.FCM.Enabled)
 
-	chattoCore.OnPushTestRequested = func(ctx context.Context, userID string) error {
-		subscriptions, err := chattoCore.GetUserPushSubscriptions(ctx, userID)
-		if err != nil {
-			return err
+	chattoCore.OnPushTestRequested = pushTestHandler(chattoCore, cfg, webSender, nativeSender, logger)
+	chattoCore.SetNotificationAlertHandler(notificationAlertHandler(chattoCore, cfg, webSender, nativeSender, logger))
+	if nativeSender != nil {
+		chattoCore.SetCallStartedHandler(incomingCallAlertHandler(chattoCore, cfg, nativeSender, logger))
+		chattoCore.SetCallRingStoppedHandler(callRingStoppedHandler(chattoCore, cfg, nativeSender, logger))
+	}
+	return nil
+}
+
+// pushTestHandler sends a test notification to every current browser
+// subscription and native alert device of a user. It skips APNs VoIP devices,
+// which receive only call pushes. It succeeds when any device accepts the
+// notification.
+func pushTestHandler(chattoCore *core.ChattoCore, cfg config.ChattoConfig, webSender notificationPushSender, nativeSender nativePushSender, logger *log.Logger) func(context.Context, string) error {
+	return func(ctx context.Context, userID string) error {
+		var subscriptions []*runtimestatev1.PushSubscription
+		if webSender != nil {
+			current, err := chattoCore.GetUserPushSubscriptions(ctx, userID)
+			if err != nil {
+				return err
+			}
+			subscriptions, err = filterOwnedPushSubscriptions(ctx, chattoCore, userID, current)
+			if err != nil {
+				return fmt.Errorf("revalidate push endpoint ownership: %w", err)
+			}
 		}
-		if len(subscriptions) == 0 {
-			return errors.New("no push subscriptions registered")
+		var devices []*runtimestatev1.NativePushDevice
+		if nativeSender != nil {
+			current, err := chattoCore.GetUserNativePushDevices(ctx, userID)
+			if err != nil {
+				return err
+			}
+			devices, err = filterCurrentNativePushDevices(ctx, chattoCore, userID, push.AlertDevices(current))
+			if err != nil {
+				return fmt.Errorf("revalidate native push device ownership: %w", err)
+			}
 		}
-		subscriptions, err = filterOwnedPushSubscriptions(ctx, chattoCore, userID, subscriptions)
-		if err != nil {
-			return fmt.Errorf("revalidate push endpoint ownership: %w", err)
-		}
-		if len(subscriptions) == 0 {
+		if len(subscriptions) == 0 && len(devices) == 0 {
 			return errors.New("no current push subscriptions registered")
 		}
-		results := sender.SendToManyMapped(ctx, subscriptions, func(subscription *runtimestatev1.PushSubscription) *push.Payload {
+
+		outcome := deliverPush(ctx, chattoCore, userID, webSender, subscriptions, func(subscription *runtimestatev1.PushSubscription) *push.Payload {
 			return &push.Payload{
 				Title: "Test notification",
 				Body:  "Push notifications are working.",
@@ -440,44 +485,33 @@ func setupPushNotifications(chattoCore *core.ChattoCore, cfg config.ChattoConfig
 				Badge: "/icons/notification-badge.png",
 				Tag:   "push-test",
 			}
-		})
-		var sendErr error
-		accepted := false
-		for _, result := range results {
-			if result.Gone {
-				if err := chattoCore.DeletePushSubscription(ctx, userID, result.Endpoint); err != nil {
-					logger.Warn("Failed to remove gone push subscription",
-						"user_id", userID,
-						"endpoint_hash", push.EndpointLogID(result.Endpoint),
-						"error", err)
-				}
-			}
-			if result.Error == nil && result.Success {
-				accepted = true
-			}
-			if result.Error != nil {
-				sendErr = result.Error
-			}
-		}
-		if accepted {
+		}, nativeSender, devices, func(*runtimestatev1.NativePushDevice) *push.Payload {
+			return push.BuildNativeTestPayload(cfg.Webserver.URL, userID)
+		}, logger)
+		if outcome.accepted {
 			return nil
 		}
-		if sendErr != nil {
-			return sendErr
+		if outcome.err != nil {
+			return outcome.err
 		}
 		return errors.New("push provider did not accept the test notification")
 	}
-
-	chattoCore.SetNotificationAlertHandler(notificationAlertHandler(chattoCore, cfg, sender, logger))
 }
 
+// notificationPushSender delivers Web Push notifications.
 type notificationPushSender interface {
 	SendToManyMapped(context.Context, []*runtimestatev1.PushSubscription, func(*runtimestatev1.PushSubscription) *push.Payload) []*push.SendResult
 }
 
+// nativePushSender delivers native APNs and FCM notifications.
+type nativePushSender interface {
+	SendToMany(context.Context, []*runtimestatev1.NativePushDevice, func(*runtimestatev1.NativePushDevice) *push.Payload) []*push.NativeSendResult
+}
+
 // notificationAlertHandler keeps the production provider seam independently
 // testable while ChattoCore owns durable signal consumption and terminal occurrence state.
-func notificationAlertHandler(chattoCore *core.ChattoCore, cfg config.ChattoConfig, sender notificationPushSender, logger *log.Logger) func(context.Context, *notificationv1.NotificationOccurrence) error {
+// webSender or nativeSender is nil when that transport is not enabled.
+func notificationAlertHandler(chattoCore *core.ChattoCore, cfg config.ChattoConfig, webSender notificationPushSender, nativeSender nativePushSender, logger *log.Logger) func(context.Context, *notificationv1.NotificationOccurrence) error {
 	return func(ctx context.Context, occurrence *notificationv1.NotificationOccurrence) error {
 		if core.NotificationOccurrenceHasUnsupportedSignal(occurrence) {
 			return core.ErrUnsupportedNotificationSignal
@@ -485,11 +519,26 @@ func notificationAlertHandler(chattoCore *core.ChattoCore, cfg config.ChattoConf
 		if core.NotificationOccurrenceRoomID(occurrence) == "" {
 			return core.ErrNotificationAlertSuppressed
 		}
-		subscriptions, err := chattoCore.GetUserPushSubscriptions(ctx, occurrence.GetRecipientId())
-		if err != nil {
-			return fmt.Errorf("get push subscriptions: %w", err)
+		recipientID := occurrence.GetRecipientId()
+		var subscriptions []*runtimestatev1.PushSubscription
+		if webSender != nil {
+			var err error
+			subscriptions, err = chattoCore.GetUserPushSubscriptions(ctx, recipientID)
+			if err != nil {
+				return fmt.Errorf("get push subscriptions: %w", err)
+			}
 		}
-		if len(subscriptions) == 0 {
+		var devices []*runtimestatev1.NativePushDevice
+		if nativeSender != nil {
+			var err error
+			devices, err = chattoCore.GetUserNativePushDevices(ctx, recipientID)
+			if err != nil {
+				return fmt.Errorf("get native push devices: %w", err)
+			}
+			// APNs VoIP devices receive only call pushes.
+			devices = push.AlertDevices(devices)
+		}
+		if len(subscriptions) == 0 && len(devices) == 0 {
 			return core.ErrNotificationAlertSuppressed
 		}
 		actorName := "Someone"
@@ -512,14 +561,18 @@ func notificationAlertHandler(chattoCore *core.ChattoCore, cfg config.ChattoConf
 		if !eligible {
 			return core.ErrNotificationAlertSuppressed
 		}
-		subscriptions, err = filterOwnedPushSubscriptions(ctx, chattoCore, occurrence.GetRecipientId(), subscriptions)
+		subscriptions, err = filterOwnedPushSubscriptions(ctx, chattoCore, recipientID, subscriptions)
 		if err != nil {
 			return fmt.Errorf("revalidate push endpoint ownership: %w", err)
 		}
-		if len(subscriptions) == 0 {
+		devices, err = filterCurrentNativePushDevices(ctx, chattoCore, recipientID, devices)
+		if err != nil {
+			return fmt.Errorf("revalidate native push device ownership: %w", err)
+		}
+		if len(subscriptions) == 0 && len(devices) == 0 {
 			return core.ErrNotificationAlertSuppressed
 		}
-		status, err := chattoCore.GetUserPresence(ctx, occurrence.GetRecipientId())
+		status, err := chattoCore.GetUserPresence(ctx, recipientID)
 		if err != nil {
 			return fmt.Errorf("revalidate notification presence before delivery: %w", err)
 		}
@@ -533,7 +586,7 @@ func notificationAlertHandler(chattoCore *core.ChattoCore, cfg config.ChattoConf
 		}
 		sendCtx, cancel := context.WithDeadline(ctx, alertDeadline)
 		defer cancel()
-		results := sender.SendToManyMapped(sendCtx, subscriptions, func(subscription *runtimestatev1.PushSubscription) *push.Payload {
+		outcome := deliverPush(sendCtx, chattoCore, recipientID, webSender, subscriptions, func(subscription *runtimestatev1.PushSubscription) *push.Payload {
 			payload := push.BuildPayloadFromOccurrenceForSubscription(
 				occurrence,
 				actorName,
@@ -544,37 +597,229 @@ func notificationAlertHandler(chattoCore *core.ChattoCore, cfg config.ChattoConf
 			)
 			payload.DeliveryDeadline = alertDeadline
 			return payload
-		})
-		var sendErr error
-		accepted := false
-		for _, result := range results {
-			if result.Gone {
-				if err := chattoCore.DeletePushSubscription(ctx, occurrence.GetRecipientId(), result.Endpoint); err != nil {
-					logger.Warn("Failed to remove gone push subscription",
-						"user_id", occurrence.GetRecipientId(),
-						"endpoint_hash", push.EndpointLogID(result.Endpoint),
-						"error", err)
-				}
-				continue
-			}
-			if result.Success {
-				accepted = true
-				continue
-			}
-			if result.Error != nil {
-				sendErr = result.Error
-			}
-		}
+		}, nativeSender, devices, func(*runtimestatev1.NativePushDevice) *push.Payload {
+			payload := push.BuildPayloadFromOccurrence(occurrence, actorName, cfg.Webserver.URL, payloadCtx)
+			payload.Kind = push.KindMessage
+			payload.DeliveryDeadline = alertDeadline
+			return payload
+		}, logger)
 		// Delivery is occurrence-scoped: once any current device accepts the
 		// alert, complete delivery. Retrying the whole occurrence for another
 		// failing endpoint would duplicate alerts on every successful device.
-		if accepted {
+		if outcome.accepted {
 			return nil
 		}
-		if sendErr == nil {
+		if outcome.err == nil {
 			return core.ErrNotificationAlertSuppressed
 		}
-		return sendErr
+		return outcome.err
+	}
+}
+
+// pushDeliveryOutcome combines the results of one Web Push and native fan-out.
+type pushDeliveryOutcome struct {
+	// accepted is true when at least one device accepted the push.
+	accepted bool
+	// err is the last transport error, or nil.
+	err error
+}
+
+// deliverPush sends to the browser subscriptions and native devices of one
+// user at the same time, and removes the devices that the providers report as
+// gone. A nil sender or an empty device list skips that transport.
+func deliverPush(
+	ctx context.Context,
+	chattoCore *core.ChattoCore,
+	userID string,
+	webSender notificationPushSender,
+	subscriptions []*runtimestatev1.PushSubscription,
+	webPayload func(*runtimestatev1.PushSubscription) *push.Payload,
+	nativeSender nativePushSender,
+	devices []*runtimestatev1.NativePushDevice,
+	nativePayload func(*runtimestatev1.NativePushDevice) *push.Payload,
+	logger *log.Logger,
+) pushDeliveryOutcome {
+	var webResults []*push.SendResult
+	var nativeResults []*push.NativeSendResult
+	var wg sync.WaitGroup
+	if webSender != nil && len(subscriptions) > 0 {
+		wg.Go(func() {
+			webResults = webSender.SendToManyMapped(ctx, subscriptions, webPayload)
+		})
+	}
+	if nativeSender != nil && len(devices) > 0 {
+		wg.Go(func() {
+			nativeResults = nativeSender.SendToMany(ctx, devices, nativePayload)
+		})
+	}
+	wg.Wait()
+
+	var outcome pushDeliveryOutcome
+	// Gone-device cleanup must not depend on the delivery deadline.
+	cleanupCtx := context.WithoutCancel(ctx)
+	for _, result := range webResults {
+		if result == nil {
+			continue
+		}
+		if result.Gone {
+			if err := chattoCore.DeletePushSubscription(cleanupCtx, userID, result.Endpoint); err != nil {
+				logger.Warn("Failed to remove gone push subscription",
+					"user_id", userID,
+					"endpoint_hash", push.EndpointLogID(result.Endpoint),
+					"error", err)
+			}
+			continue
+		}
+		if result.Success {
+			outcome.accepted = true
+			continue
+		}
+		if result.Error != nil {
+			outcome.err = result.Error
+		}
+	}
+	for _, result := range nativeResults {
+		if result == nil {
+			continue
+		}
+		if result.Gone {
+			if err := chattoCore.DeleteNativePushDevice(cleanupCtx, userID, result.Token); err != nil {
+				logger.Warn("Failed to remove gone native push device",
+					"user_id", userID,
+					"token_hash", push.EndpointLogID(result.Token),
+					"error", err)
+			} else {
+				logger.Debug("Removed gone native push device",
+					"user_id", userID,
+					"token_hash", push.EndpointLogID(result.Token),
+					"reason", result.Error)
+			}
+			continue
+		}
+		if result.Success {
+			outcome.accepted = true
+			continue
+		}
+		if result.Error != nil {
+			outcome.err = result.Error
+		}
+	}
+	return outcome
+}
+
+// filterCurrentNativePushDevices keeps the devices that are still the exact
+// active records of userID.
+func filterCurrentNativePushDevices(
+	ctx context.Context,
+	chattoCore *core.ChattoCore,
+	userID string,
+	devices []*runtimestatev1.NativePushDevice,
+) ([]*runtimestatev1.NativePushDevice, error) {
+	current := make([]*runtimestatev1.NativePushDevice, 0, len(devices))
+	for _, device := range devices {
+		ok, err := chattoCore.NativePushDeviceCurrentForUser(ctx, userID, device)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			current = append(current, device)
+		}
+	}
+	return current, nil
+}
+
+// incomingCallAlertHandler sends an incoming-call native push to the other
+// members of a direct message when a call starts there. push.CallRingDevices
+// selects the devices. Before the push, it records the ring when a device can
+// receive a call-end push, so callRingStoppedHandler can stop the ring later.
+// It is best-effort: it logs failures and does not retry, because a ring is
+// useful only for a short time.
+func incomingCallAlertHandler(chattoCore *core.ChattoCore, cfg config.ChattoConfig, nativeSender nativePushSender, logger *log.Logger) core.CallStartedHandler {
+	return func(ctx context.Context, roomID, callID, starterID string) {
+		recipients, err := chattoCore.IncomingCallAlertRecipients(ctx, roomID, callID, starterID)
+		if err != nil {
+			logger.Warn("Failed to resolve incoming-call push recipients", "room_id", roomID, "error", err)
+			return
+		}
+		if len(recipients) == 0 {
+			return
+		}
+		callerName := "Someone"
+		if starterID != "" {
+			if caller, err := chattoCore.GetUser(ctx, starterID); err == nil && caller != nil {
+				callerName = caller.DisplayName
+				if callerName == "" {
+					callerName = caller.Login
+				}
+			}
+		}
+		for _, recipientID := range recipients {
+			devices, err := chattoCore.GetUserNativePushDevices(ctx, recipientID)
+			if err != nil {
+				logger.Warn("Failed to read native push devices for incoming call", "user_id", recipientID, "error", err)
+				continue
+			}
+			devices, err = filterCurrentNativePushDevices(ctx, chattoCore, recipientID, push.CallRingDevices(devices))
+			if err != nil {
+				logger.Warn("Failed to revalidate native push devices for incoming call", "user_id", recipientID, "error", err)
+				continue
+			}
+			if len(devices) == 0 {
+				continue
+			}
+			if !chattoCore.IncomingCallStillRinging(roomID, callID, recipientID) {
+				continue
+			}
+			if len(push.CallEndDevices(devices)) > 0 {
+				if err := chattoCore.RecordCallRing(ctx, roomID, callID, recipientID); err != nil {
+					// Ring anyway: a ring without a later call-end push stops by
+					// its own timeout on the device.
+					logger.Warn("Failed to record incoming-call ring", "user_id", recipientID, "room_id", roomID, "error", err)
+				}
+				// A join or a call end before the record did not find it. Check
+				// again, and remove the record when nothing rings.
+				if !chattoCore.IncomingCallStillRinging(roomID, callID, recipientID) {
+					chattoCore.ReleaseCallRing(ctx, callID, recipientID)
+					continue
+				}
+			}
+			outcome := deliverPush(ctx, chattoCore, recipientID, nil, nil, nil, nativeSender, devices, func(*runtimestatev1.NativePushDevice) *push.Payload {
+				return push.BuildIncomingCallPayload(cfg.Webserver.URL, roomID, callID, recipientID, callerName)
+			}, logger)
+			if !outcome.accepted && outcome.err != nil {
+				logger.Debug("Incoming-call push was not accepted", "user_id", recipientID, "room_id", roomID, "error", outcome.err)
+			}
+		}
+	}
+}
+
+// callRingStoppedHandler sends a call-end native push to the APNs VoIP and FCM
+// devices of each account whose ring stopped, so those devices stop ringing.
+// Plain APNs devices get nothing: an alert push cannot stop a ring. It is
+// best-effort like incomingCallAlertHandler.
+func callRingStoppedHandler(chattoCore *core.ChattoCore, cfg config.ChattoConfig, nativeSender nativePushSender, logger *log.Logger) core.CallRingStoppedHandler {
+	return func(ctx context.Context, roomID, callID string, recipientIDs []string) {
+		for _, recipientID := range recipientIDs {
+			devices, err := chattoCore.GetUserNativePushDevices(ctx, recipientID)
+			if err != nil {
+				logger.Warn("Failed to read native push devices for call end", "user_id", recipientID, "error", err)
+				continue
+			}
+			devices, err = filterCurrentNativePushDevices(ctx, chattoCore, recipientID, push.CallEndDevices(devices))
+			if err != nil {
+				logger.Warn("Failed to revalidate native push devices for call end", "user_id", recipientID, "error", err)
+				continue
+			}
+			if len(devices) == 0 {
+				continue
+			}
+			outcome := deliverPush(ctx, chattoCore, recipientID, nil, nil, nil, nativeSender, devices, func(*runtimestatev1.NativePushDevice) *push.Payload {
+				return push.BuildCallEndPayload(cfg.Webserver.URL, roomID, callID, recipientID)
+			}, logger)
+			if !outcome.accepted && outcome.err != nil {
+				logger.Debug("Call-end push was not accepted", "user_id", recipientID, "room_id", roomID, "error", outcome.err)
+			}
+		}
 	}
 }
 

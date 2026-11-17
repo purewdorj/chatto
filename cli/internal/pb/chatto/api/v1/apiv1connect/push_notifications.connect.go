@@ -42,6 +42,12 @@ const (
 	// PushNotificationServiceSendTestNotificationProcedure is the fully-qualified name of the
 	// PushNotificationService's SendTestNotification RPC.
 	PushNotificationServiceSendTestNotificationProcedure = "/chatto.api.v1.PushNotificationService/SendTestNotification"
+	// PushNotificationServiceRegisterNativeDeviceProcedure is the fully-qualified name of the
+	// PushNotificationService's RegisterNativeDevice RPC.
+	PushNotificationServiceRegisterNativeDeviceProcedure = "/chatto.api.v1.PushNotificationService/RegisterNativeDevice"
+	// PushNotificationServiceUnregisterNativeDeviceProcedure is the fully-qualified name of the
+	// PushNotificationService's UnregisterNativeDevice RPC.
+	PushNotificationServiceUnregisterNativeDeviceProcedure = "/chatto.api.v1.PushNotificationService/UnregisterNativeDevice"
 )
 
 // PushNotificationServiceClient is a client for the chatto.api.v1.PushNotificationService service.
@@ -60,10 +66,37 @@ type PushNotificationServiceClient interface {
 	//
 	// The call is idempotent: removing an unknown endpoint still succeeds.
 	Unsubscribe(context.Context, *connect.Request[v1.UnsubscribeRequest]) (*connect.Response[v1.UnsubscribeResponse], error)
-	// Sends a test notification to the caller's registered browser subscriptions.
-	// Calls are rate-limited per account. Delivery failures return a generic
-	// unavailable error without exposing the push provider's response body.
+	// Sends a test notification to the caller's registered browser
+	// subscriptions and native devices. Calls are rate-limited per account.
+	// The call succeeds when at least one device accepts the notification.
+	// Delivery failures return a generic unavailable error without exposing the
+	// push provider's response body.
 	SendTestNotification(context.Context, *connect.Request[v1.SendTestNotificationRequest]) (*connect.Response[v1.SendTestNotificationResponse], error)
+	// Stores or updates the caller's native mobile push device.
+	//
+	// The server must deliver to the requested platform. Read
+	// ServerRuntimeConfig.native_push_platforms to find the platforms that the
+	// server supports; the call fails with FAILED_PRECONDITION for other
+	// platforms. The app_id must be an app identifier that the server operator
+	// allows; the call fails with INVALID_ARGUMENT for other identifiers.
+	//
+	// A stored device expires 180 days after its most recent save. The client
+	// owns the refresh: call RegisterNativeDevice again when the app starts, at
+	// least once a day while it runs, and when the operating system issues a
+	// new token. The server removes expired devices itself, and it removes a
+	// device when the push service reports that the token is no longer valid.
+	// A device token is active for only the account that most recently
+	// registered it. Call UnregisterNativeDevice to stop delivery before the
+	// device expires.
+	//
+	// Native push sends notification content to Apple or Google in clear text.
+	// The server operator can configure the server to omit message previews.
+	RegisterNativeDevice(context.Context, *connect.Request[v1.RegisterNativeDeviceRequest]) (*connect.Response[v1.RegisterNativeDeviceResponse], error)
+	// Removes the caller's native push device by device token.
+	//
+	// The call is idempotent: removing an unknown token still succeeds. The call
+	// succeeds also when the server no longer delivers native push.
+	UnregisterNativeDevice(context.Context, *connect.Request[v1.UnregisterNativeDeviceRequest]) (*connect.Response[v1.UnregisterNativeDeviceResponse], error)
 }
 
 // NewPushNotificationServiceClient constructs a client for the
@@ -96,14 +129,29 @@ func NewPushNotificationServiceClient(httpClient connect.HTTPClient, baseURL str
 			connect.WithSchema(pushNotificationServiceMethods.ByName("SendTestNotification")),
 			connect.WithClientOptions(opts...),
 		),
+		registerNativeDevice: connect.NewClient[v1.RegisterNativeDeviceRequest, v1.RegisterNativeDeviceResponse](
+			httpClient,
+			baseURL+PushNotificationServiceRegisterNativeDeviceProcedure,
+			connect.WithSchema(pushNotificationServiceMethods.ByName("RegisterNativeDevice")),
+			connect.WithClientOptions(opts...),
+		),
+		unregisterNativeDevice: connect.NewClient[v1.UnregisterNativeDeviceRequest, v1.UnregisterNativeDeviceResponse](
+			httpClient,
+			baseURL+PushNotificationServiceUnregisterNativeDeviceProcedure,
+			connect.WithSchema(pushNotificationServiceMethods.ByName("UnregisterNativeDevice")),
+			connect.WithIdempotency(connect.IdempotencyIdempotent),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // pushNotificationServiceClient implements PushNotificationServiceClient.
 type pushNotificationServiceClient struct {
-	subscribe            *connect.Client[v1.SubscribeRequest, v1.SubscribeResponse]
-	unsubscribe          *connect.Client[v1.UnsubscribeRequest, v1.UnsubscribeResponse]
-	sendTestNotification *connect.Client[v1.SendTestNotificationRequest, v1.SendTestNotificationResponse]
+	subscribe              *connect.Client[v1.SubscribeRequest, v1.SubscribeResponse]
+	unsubscribe            *connect.Client[v1.UnsubscribeRequest, v1.UnsubscribeResponse]
+	sendTestNotification   *connect.Client[v1.SendTestNotificationRequest, v1.SendTestNotificationResponse]
+	registerNativeDevice   *connect.Client[v1.RegisterNativeDeviceRequest, v1.RegisterNativeDeviceResponse]
+	unregisterNativeDevice *connect.Client[v1.UnregisterNativeDeviceRequest, v1.UnregisterNativeDeviceResponse]
 }
 
 // Subscribe calls chatto.api.v1.PushNotificationService.Subscribe.
@@ -119,6 +167,16 @@ func (c *pushNotificationServiceClient) Unsubscribe(ctx context.Context, req *co
 // SendTestNotification calls chatto.api.v1.PushNotificationService.SendTestNotification.
 func (c *pushNotificationServiceClient) SendTestNotification(ctx context.Context, req *connect.Request[v1.SendTestNotificationRequest]) (*connect.Response[v1.SendTestNotificationResponse], error) {
 	return c.sendTestNotification.CallUnary(ctx, req)
+}
+
+// RegisterNativeDevice calls chatto.api.v1.PushNotificationService.RegisterNativeDevice.
+func (c *pushNotificationServiceClient) RegisterNativeDevice(ctx context.Context, req *connect.Request[v1.RegisterNativeDeviceRequest]) (*connect.Response[v1.RegisterNativeDeviceResponse], error) {
+	return c.registerNativeDevice.CallUnary(ctx, req)
+}
+
+// UnregisterNativeDevice calls chatto.api.v1.PushNotificationService.UnregisterNativeDevice.
+func (c *pushNotificationServiceClient) UnregisterNativeDevice(ctx context.Context, req *connect.Request[v1.UnregisterNativeDeviceRequest]) (*connect.Response[v1.UnregisterNativeDeviceResponse], error) {
+	return c.unregisterNativeDevice.CallUnary(ctx, req)
 }
 
 // PushNotificationServiceHandler is an implementation of the chatto.api.v1.PushNotificationService
@@ -138,10 +196,37 @@ type PushNotificationServiceHandler interface {
 	//
 	// The call is idempotent: removing an unknown endpoint still succeeds.
 	Unsubscribe(context.Context, *connect.Request[v1.UnsubscribeRequest]) (*connect.Response[v1.UnsubscribeResponse], error)
-	// Sends a test notification to the caller's registered browser subscriptions.
-	// Calls are rate-limited per account. Delivery failures return a generic
-	// unavailable error without exposing the push provider's response body.
+	// Sends a test notification to the caller's registered browser
+	// subscriptions and native devices. Calls are rate-limited per account.
+	// The call succeeds when at least one device accepts the notification.
+	// Delivery failures return a generic unavailable error without exposing the
+	// push provider's response body.
 	SendTestNotification(context.Context, *connect.Request[v1.SendTestNotificationRequest]) (*connect.Response[v1.SendTestNotificationResponse], error)
+	// Stores or updates the caller's native mobile push device.
+	//
+	// The server must deliver to the requested platform. Read
+	// ServerRuntimeConfig.native_push_platforms to find the platforms that the
+	// server supports; the call fails with FAILED_PRECONDITION for other
+	// platforms. The app_id must be an app identifier that the server operator
+	// allows; the call fails with INVALID_ARGUMENT for other identifiers.
+	//
+	// A stored device expires 180 days after its most recent save. The client
+	// owns the refresh: call RegisterNativeDevice again when the app starts, at
+	// least once a day while it runs, and when the operating system issues a
+	// new token. The server removes expired devices itself, and it removes a
+	// device when the push service reports that the token is no longer valid.
+	// A device token is active for only the account that most recently
+	// registered it. Call UnregisterNativeDevice to stop delivery before the
+	// device expires.
+	//
+	// Native push sends notification content to Apple or Google in clear text.
+	// The server operator can configure the server to omit message previews.
+	RegisterNativeDevice(context.Context, *connect.Request[v1.RegisterNativeDeviceRequest]) (*connect.Response[v1.RegisterNativeDeviceResponse], error)
+	// Removes the caller's native push device by device token.
+	//
+	// The call is idempotent: removing an unknown token still succeeds. The call
+	// succeeds also when the server no longer delivers native push.
+	UnregisterNativeDevice(context.Context, *connect.Request[v1.UnregisterNativeDeviceRequest]) (*connect.Response[v1.UnregisterNativeDeviceResponse], error)
 }
 
 // NewPushNotificationServiceHandler builds an HTTP handler from the service implementation. It
@@ -170,6 +255,19 @@ func NewPushNotificationServiceHandler(svc PushNotificationServiceHandler, opts 
 		connect.WithSchema(pushNotificationServiceMethods.ByName("SendTestNotification")),
 		connect.WithHandlerOptions(opts...),
 	)
+	pushNotificationServiceRegisterNativeDeviceHandler := connect.NewUnaryHandler(
+		PushNotificationServiceRegisterNativeDeviceProcedure,
+		svc.RegisterNativeDevice,
+		connect.WithSchema(pushNotificationServiceMethods.ByName("RegisterNativeDevice")),
+		connect.WithHandlerOptions(opts...),
+	)
+	pushNotificationServiceUnregisterNativeDeviceHandler := connect.NewUnaryHandler(
+		PushNotificationServiceUnregisterNativeDeviceProcedure,
+		svc.UnregisterNativeDevice,
+		connect.WithSchema(pushNotificationServiceMethods.ByName("UnregisterNativeDevice")),
+		connect.WithIdempotency(connect.IdempotencyIdempotent),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/chatto.api.v1.PushNotificationService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PushNotificationServiceSubscribeProcedure:
@@ -178,6 +276,10 @@ func NewPushNotificationServiceHandler(svc PushNotificationServiceHandler, opts 
 			pushNotificationServiceUnsubscribeHandler.ServeHTTP(w, r)
 		case PushNotificationServiceSendTestNotificationProcedure:
 			pushNotificationServiceSendTestNotificationHandler.ServeHTTP(w, r)
+		case PushNotificationServiceRegisterNativeDeviceProcedure:
+			pushNotificationServiceRegisterNativeDeviceHandler.ServeHTTP(w, r)
+		case PushNotificationServiceUnregisterNativeDeviceProcedure:
+			pushNotificationServiceUnregisterNativeDeviceHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -197,4 +299,12 @@ func (UnimplementedPushNotificationServiceHandler) Unsubscribe(context.Context, 
 
 func (UnimplementedPushNotificationServiceHandler) SendTestNotification(context.Context, *connect.Request[v1.SendTestNotificationRequest]) (*connect.Response[v1.SendTestNotificationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chatto.api.v1.PushNotificationService.SendTestNotification is not implemented"))
+}
+
+func (UnimplementedPushNotificationServiceHandler) RegisterNativeDevice(context.Context, *connect.Request[v1.RegisterNativeDeviceRequest]) (*connect.Response[v1.RegisterNativeDeviceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chatto.api.v1.PushNotificationService.RegisterNativeDevice is not implemented"))
+}
+
+func (UnimplementedPushNotificationServiceHandler) UnregisterNativeDevice(context.Context, *connect.Request[v1.UnregisterNativeDeviceRequest]) (*connect.Response[v1.UnregisterNativeDeviceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chatto.api.v1.PushNotificationService.UnregisterNativeDevice is not implemented"))
 }

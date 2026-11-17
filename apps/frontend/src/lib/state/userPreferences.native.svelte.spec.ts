@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@capacitor/core', () => ({ Capacitor: { getPlatform: () => 'ios' } }));
+vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => true } }));
 
 import { UserPreferencesState } from './userPreferences.svelte';
 
-describe('native iOS surface depth', () => {
+describe('native app surface depth', () => {
   beforeEach(() => localStorage.clear());
 
   it('defaults to Flat for a new installation', () => {

@@ -6,7 +6,7 @@ import { dirname, join } from 'path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const srcDir = join(__dirname, '../src/lib/assets');
 const outDir = join(__dirname, '../static/icons');
-const installIconBackground = '#c5a4d4';
+const installIconBackground = '#ffffff';
 
 const sizes = [
   // Install-facing icons must be full-bleed and opaque so Safari/macOS does
@@ -19,7 +19,7 @@ const sizes = [
   // Browser tab favicon keeps the smaller rounded composition.
   { name: 'favicon.png', size: 32, source: 'chatto-icon.png', flatten: false },
   // Android masks the small notification badge. Keep its background and
-  // facial details transparent instead of using an opaque install icon.
+  // gaps in the knot transparent instead of using an opaque install icon.
   {
     name: 'notification-badge.png',
     size: 96,

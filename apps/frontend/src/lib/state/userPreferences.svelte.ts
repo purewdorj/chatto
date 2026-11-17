@@ -200,8 +200,8 @@ export function hexFromComputedColor(value: string): string | null {
  * former Flat, Kinda 3D, and Very 3D modes. Keep app.html in sync.
  */
 export const surfaceDepthStep = 10;
-/** Native iOS starts flat; browser/PWA and other hosts retain the Kinda 3D default. */
-export const defaultSurfaceDepth = Capacitor.getPlatform() === 'ios' ? 0 : 50;
+/** Native mobile apps start flat; browser/PWA and other hosts retain the Kinda 3D default. */
+export const defaultSurfaceDepth = Capacitor.isNativePlatform() ? 0 : 50;
 
 /** Former named modes, migrated from earlier saved preferences. */
 const legacySurfaceDepths: Readonly<Record<string, number>> = {

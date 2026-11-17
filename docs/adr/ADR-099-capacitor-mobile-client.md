@@ -4,6 +4,12 @@
 
 **Status:** Accepted
 
+**Update 2026-11-17:** Android is now included. It serves the bundled frontend
+at `https://localhost` and has an Android `ChattoAuthorization` plugin with
+the same contract, which uses a Custom Tab. Both platforms include the native
+push plugin. The iOS `remote-notification` background mode serves that plugin.
+See FDR-048 and FDR-056.
+
 ## Context
 
 Chatto Desktop already bundles the shared frontend. Mobile needs the same

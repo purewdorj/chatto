@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -79,7 +80,33 @@ type CallModel struct {
 	effectLogger       *log.Logger
 	keyCleanupConsumer jetstream.Consumer
 	keyCleanupWorker   *events.DurableWorker
+	// callStarted holds the handler that receives each call that this replica
+	// started. See ChattoCore.SetCallStartedHandler. It is a pointer, so copies
+	// of the model share it.
+	callStarted *callStartedHook
 }
+
+// callStartedHook holds the optional call alert handlers for concurrent use.
+type callStartedHook struct {
+	handler atomic.Pointer[CallStartedHandler]
+	// ringStop receives each join of a running call and each call end that
+	// this replica committed. See ChattoCore.SetCallRingStoppedHandler.
+	ringStop atomic.Pointer[callRingStopHook]
+}
+
+// callRingStopHook receives a committed transition that can stop a ring.
+// joinedUserID is set when an account joined a running call. ended is true
+// when the call ended.
+type callRingStopHook func(ctx context.Context, roomID, callID, joinedUserID string, ended bool)
+
+// CallStartedHandler receives a call that this replica committed as started.
+// roomID and callID identify the call; starterID is the account whose join
+// started it. The handler runs in its own goroutine with a bounded context.
+type CallStartedHandler func(ctx context.Context, roomID, callID, starterID string)
+
+// callStartedHandlerTimeout bounds one call-started handler run. It matches
+// the ring duration of an incoming call.
+const callStartedHandlerTimeout = 30 * time.Second
 
 type liveKitFailureCleanupSummary struct {
 	activeRooms   int
@@ -134,6 +161,7 @@ func NewCallModel(
 	logger *log.Logger,
 ) *CallModel {
 	model := &CallModel{
+		callStarted:    &callStartedHook{},
 		publisher:      publisher,
 		callState:      callState,
 		callKeys:       callKeys,
@@ -544,6 +572,14 @@ func (s *CallModel) appendParticipantTransitionAuthorized(ctx context.Context, r
 			}
 			if err := s.callState.Projector().WaitFor(ctx, events.SubjectPosition(filter, seq)); err != nil {
 				return err
+			}
+			if callID := startedCallID(entries); callID != "" {
+				s.notifyCallStarted(roomID, callID, userID)
+			} else if callID := joinedCallID(entries); callID != "" {
+				s.notifyCallRingStop(roomID, callID, userID, false)
+			}
+			if callID := endedCallID(entries); callID != "" {
+				s.notifyCallRingStop(roomID, callID, "", true)
 			}
 			return nil
 		}
@@ -1089,4 +1125,80 @@ func (s *CallModel) cleanupMembershipEndedCallKey(ctx context.Context, keyRef st
 		return fmt.Errorf("shred ended call key: %w", err)
 	}
 	return nil
+}
+
+// startedCallID returns the call ID when entries start a new call.
+func startedCallID(entries []evtstream.BatchEntry) string {
+	for _, entry := range entries {
+		if started := entry.Event.GetVoiceCallStarted(); started != nil {
+			return started.GetCallId()
+		}
+	}
+	return ""
+}
+
+// joinedCallID returns the call ID when entries add a participant.
+func joinedCallID(entries []evtstream.BatchEntry) string {
+	for _, entry := range entries {
+		if joined := entry.Event.GetVoiceCallParticipantJoined(); joined != nil {
+			return joined.GetCallId()
+		}
+	}
+	return ""
+}
+
+// endedCallID returns the call ID when entries end a call.
+func endedCallID(entries []evtstream.BatchEntry) string {
+	for _, entry := range entries {
+		if ended := entry.Event.GetVoiceCallEnded(); ended != nil {
+			return ended.GetCallId()
+		}
+	}
+	return ""
+}
+
+// notifyCallRingStop runs the ring-stop hook without blocking the transition.
+// Like notifyCallStarted, it is best-effort.
+func (s *CallModel) notifyCallRingStop(roomID, callID, joinedUserID string, ended bool) {
+	if s.callStarted == nil {
+		return
+	}
+	hook := s.callStarted.ringStop.Load()
+	if hook == nil {
+		return
+	}
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), callStartedHandlerTimeout)
+		defer cancel()
+		(*hook)(ctx, roomID, callID, joinedUserID, ended)
+	}()
+}
+
+// notifyCallStarted runs the call-started handler without blocking the join.
+// The handler is best-effort: only the replica that committed the start runs
+// it, and a crash before it runs skips it. A ring is short-lived, so a missed
+// ring needs no durable recovery.
+func (s *CallModel) notifyCallStarted(roomID, callID, starterID string) {
+	if s.callStarted == nil {
+		return
+	}
+	handler := s.callStarted.handler.Load()
+	if handler == nil {
+		return
+	}
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), callStartedHandlerTimeout)
+		defer cancel()
+		(*handler)(ctx, roomID, callID, starterID)
+	}()
+}
+
+// SetCallStartedHandler installs the handler that receives each call that
+// this replica starts. Set it before Run. A nil handler removes it.
+func (c *ChattoCore) SetCallStartedHandler(handler CallStartedHandler) {
+	if handler == nil {
+		c.callModel.callStarted.handler.Store(nil)
+		return
+	}
+	c.callModel.callStarted.handler.Store(&handler)
 }

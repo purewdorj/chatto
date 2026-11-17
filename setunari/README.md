@@ -20,6 +20,10 @@ commit of this branch that production runs).
 | Default server | `apps/frontend/src/lib/setunari.ts`, `serverCatalogue.ts` (`ensureSetunariServer`), `routes/+page.ts` | A page without its own Chatto origin (the desktop app) starts with `https://chat.setunari-group.com` when no server is registered. |
 | DMG | `apps/desktop/scripts/macos-dmg.mjs` | Packages the release profile (`Setunari Chat`). |
 | Mac app CI | `.github/workflows/setunari-desktop.yml` | Signed and notarized production Mac build and GitHub Release. |
+| iPhone app | `apps/mobile/capacitor.config.json`, `ios/App/App.xcodeproj`, `ios/App/App/Info.plist` | iOS app is **Setunari Chat** (`mn.setunari.chatto.mobile`, team Vibe Pay LLC `83QS64JBQ3`). It keeps the upstream OAuth client and callback (`eu.chattocorp.chatto.mobile`), so sign-in works with the production server. It starts with the default server like the desktop app. |
+| iPhone push | `apps/mobile/ios/App/App/App.entitlements`, `AppDelegate.swift`, `Info.plist` | Push Notifications capability (`aps-environment`), `remote-notification` background mode, and APNs token forwarding to `@capacitor/push-notifications` 8.1.3. Foreground notifications show a banner with sound and badge. |
+| Android app | `apps/mobile/android/`, `apps/mobile/scripts/prepare.mjs`, `mise.toml` (`mobile-android-*`) | Android app is **Setunari Chat** (`mn.setunari.chatto.mobile`). Same frontend and the same upstream OAuth client and callback as the iPhone app; sign-in uses a Custom Tab. Firebase push plugin, notification channels `messages` and `calls`. |
+| Native push and calls | `cli/internal/push/` (`apns.go`, `fcm.go`, `native.go`), `apps/frontend/src/lib/notifications/nativePushNotifications.svelte.ts`, `apps/mobile/ios/App/App/CallManager.swift`, `apps/mobile/android/.../ChattoMessagingService.java` | Server sends notifications through APNs and FCM ([FDR-056](../docs/fdr/FDR-056-native-push-notifications.md)); configure `[push.apns]` (`CHATTO_PUSH_APNS_*`, topics `mn.setunari.chatto.mobile`) and `[push.fcm]`. Direct-message calls ring like phone calls: CallKit on iOS, a full-screen call notification on Android, also when the app is closed. Turn on in the app: Settings → Your account → Notifications. |
 
 Search for `Setunari` in the source to find each change.
 
@@ -70,3 +74,49 @@ Settings → Privacy & Security.
 ```bash
 docker build -f setunari/Dockerfile --build-arg VERSION=0.5.0-setunari.1 -t setunari-chatto:dev .
 ```
+
+## Run the iPhone app on a device
+
+Connect and unlock the iPhone (Developer Mode on). From the repository root:
+
+```bash
+mise mobile-ios-sync
+cd apps/mobile
+xcodebuild -project ios/App/App.xcodeproj -scheme Chatto -configuration Debug \
+  -destination 'id=<device UDID>' -derivedDataPath ../../.context/mobile-ios-device \
+  -allowProvisioningUpdates build
+xcrun devicectl device install app --device <device UDID> \
+  ../../.context/mobile-ios-device/Build/Products/Debug-iphoneos/Chatto.app
+xcrun devicectl device process launch --device <device UDID> mn.setunari.chatto.mobile
+```
+
+`xcrun devicectl list devices` shows the UDID. You can also use `mise mobile-ios-open` and select Run in Xcode.
+
+## Build and install the Android app
+
+Install JDK 21 (mise installs it for the build task) and the Android SDK with platform 36. Set
+`ANDROID_HOME` to the SDK, for example `/opt/homebrew/share/android-commandlinetools`. From the
+repository root:
+
+```bash
+mise mobile-android-build
+adb devices                     # the phone must show as "device" (USB debugging on)
+adb install -r apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+adb shell am start -n mn.setunari.chatto.mobile/.MainActivity
+```
+
+`mise mobile-android-open` opens the project in Android Studio.
+
+Push on Android needs Firebase. In the Firebase console, add an Android app with the package name
+`mn.setunari.chatto.mobile` and put its `google-services.json` in `apps/mobile/android/app/`. The
+file is not secret; it is not in the repository. Without it, the app builds and runs, but push
+registration fails. The server needs a service account key of the same Firebase project.
+
+A release build for other people needs a signing keystore. Keep it outside the repository.
+
+## Push on the iPhone app
+
+The Chatto target has the Push Notifications capability. Automatic signing with team `83QS64JBQ3`
+adds it to the App ID `mn.setunari.chatto.mobile`. Debug builds use the APNs sandbox; an archive
+for TestFlight or the App Store uses production. The server needs an APNs authentication key
+(`.p8`, key ID, and team ID) from the same Apple team.
