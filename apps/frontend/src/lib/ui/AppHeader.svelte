@@ -13,6 +13,7 @@
   import MotdContent from '$lib/ui/MotdContent.svelte';
   import { SERVER_SETTINGS_ROOT_ROUTE } from '$lib/navigation/settingsRoutes';
   import { desktopUpdates, type DesktopUpdates } from '$lib/desktop/updates.svelte';
+  import { shortcutKeys } from '$lib/keyboardShortcuts';
 
   let { updates = desktopUpdates }: { updates?: DesktopUpdates } = $props();
 
@@ -54,6 +55,11 @@
     if (activeServerId && serverRegistry.isAuthenticated(activeServerId)) return activeServerId;
     return firstAuthenticatedServerId();
   });
+
+  // Setunari: platform keys for the header search bar hint, e.g. "⌘ K" or "Ctrl K".
+  const searchShortcut = shortcutKeys({ label: '', key: 'k', command: true, group: 'app' }).join(
+    ' '
+  );
 
   function showAboutChatto() {
     pushState('', { modal: { type: 'aboutChatto' } });
@@ -101,11 +107,11 @@
       </a>
     {/if}
 
-    <!-- Quick switcher trigger -->
+    <!-- Quick switcher trigger (narrow viewports; wide ones use the search bar below) -->
     {#if hasInstances}
       <button
         type="button"
-        class="app-header-icon"
+        class="app-header-icon md:hidden"
         onclick={() => quickSwitcher.open()}
         aria-label={m('ui.open_quick_switcher')}
         title={m('ui.quick_switcher_shortcut')}
@@ -144,10 +150,29 @@
     {/if}
   </div>
 
+  <!-- Setunari: Slack-style search bar. Opens the Quick Switcher, which searches channels,
+       DMs, all people, and messages together. -->
+  {#if hasInstances}
+    <div class="hidden min-w-0 flex-1 justify-center md:flex">
+      <button
+        type="button"
+        class="flex h-8 w-full max-w-xl min-w-0 cursor-pointer items-center gap-2 rounded-md border border-input-border bg-input px-3 text-start text-muted transition-colors hover:text-text"
+        onclick={() => quickSwitcher.open()}
+        title={m('ui.quick_switcher_shortcut')}
+        aria-keyshortcuts="Control+K Meta+K"
+        data-testid="app-header-search"
+      >
+        <span aria-hidden="true" class="iconify icon-[uil--search] shrink-0"></span>
+        <span class="min-w-0 flex-1 truncate">{m('room.sidebar.search')}</span>
+        <kbd class="keycap shrink-0" aria-hidden="true">{searchShortcut}</kbd>
+      </button>
+    </div>
+  {/if}
+
   <!-- MOTD -->
   {#if motd}
     <MotdContent {motd} onclick={() => pushState('', { modal: { type: 'motd', motd } })} />
-  {:else}
+  {:else if !hasInstances}
     <span class="flex-1"></span>
   {/if}
 

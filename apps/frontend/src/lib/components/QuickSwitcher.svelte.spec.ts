@@ -282,7 +282,7 @@ async function renderOpenSwitcher() {
 function input(container: HTMLElement): HTMLInputElement {
   return q(
     container,
-    'input[placeholder="Go somewhere, or type ? to search messages..."]'
+    'input[placeholder="Search channels, people, and messages..."]'
   ) as HTMLInputElement;
 }
 
@@ -466,7 +466,10 @@ describe('QuickSwitcher', () => {
     setSearch(container, 'river');
     expect(resultButtons(container)).toHaveLength(1);
     expect(container.textContent).toContain('River Teammate');
-    expect(container.querySelector('[class~="icon-[uil--spinner-alt]"]')).toBeNull();
+    // Setunari: the mixed message search finishes before the spinner clears.
+    await vi.waitFor(() =>
+      expect(container.querySelector('[class~="icon-[uil--spinner-alt]"]')).toBeNull()
+    );
     input(container).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     await vi.waitFor(() => {
       expect(mocks.goto).toHaveBeenCalledWith('/chat/-/dm-existing');
@@ -497,10 +500,12 @@ describe('QuickSwitcher', () => {
       ]
     });
     expect(resultButtons(container)).toHaveLength(2);
-    expect(container.querySelector('[class~="icon-[uil--spinner-alt]"]')).toBeNull();
+    // Setunari: directory people and message matches load after the local catalogue.
+    await vi.waitFor(() =>
+      expect(container.querySelector('[class~="icon-[uil--spinner-alt]"]')).toBeNull()
+    );
     input(container).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     await vi.waitFor(() => expect(mocks.goto).toHaveBeenCalledWith('/chat/-/dm-existing'));
-    expect(mocks.listUsers).not.toHaveBeenCalled();
   });
 
   it('distinguishes incomplete catalogues from an empty local search', async () => {
@@ -509,8 +514,9 @@ describe('QuickSwitcher', () => {
     setSearch(container, 'missing');
     expect(container.textContent).not.toContain('No results');
     publishNavigation('origin', { ...mocks.store.navigation, isInitialLoading: false });
-    expect(container.textContent).toContain('No results');
-    expect(mocks.listUsers).not.toHaveBeenCalled();
+    // Setunari: "No results" waits for the directory and message searches too.
+    await vi.waitFor(() => expect(container.textContent).toContain('No results'));
+    expect(mocks.listUsers).toHaveBeenCalledWith('missing', 8, 0);
   });
 
   it('limits group DM avatars while marking bots after the first two participants', async () => {
@@ -611,7 +617,7 @@ describe('QuickSwitcher', () => {
       navigation: { ...mocks.store.navigation, isInitialLoading: true }
     });
     setSearch(container, 'missing');
-    expect(container.textContent).toContain('No results');
+    await vi.waitFor(() => expect(container.textContent).toContain('No results'));
     publishNavigation('origin', { ...mocks.store.navigation, isInitialLoading: true });
     setSearch(container, '?');
     expect(container.querySelector('[class~="icon-[uil--spinner-alt]"]')).toBeNull();
@@ -962,6 +968,84 @@ describe('QuickSwitcher', () => {
     await vi.waitFor(() => {
       expect(container.textContent).toContain('A result from the healthy server');
     });
+  });
+
+  // Setunari: one query searches destinations, every server member, and messages.
+  it('finds people from the server user directory and starts their DM', async () => {
+    mocks.listUsers.mockResolvedValue({
+      members: [
+        {
+          ...user('user-directory', 'saruul', 'Saruul Directory'),
+          deleted: false,
+          roles: [],
+          createdAt: null
+        },
+        { ...teammate, deleted: false, roles: [], createdAt: null }
+      ],
+      totalCount: 2,
+      hasMore: false
+    });
+    const { container } = await renderOpenSwitcher();
+    setSearch(container, 'saruul');
+
+    await vi.waitFor(() => expect(container.textContent).toContain('Saruul Directory'));
+    expect(mocks.listUsers).toHaveBeenCalledWith('saruul', 8, 0);
+    expect(container.textContent).toContain('User');
+
+    resultButtons(container)
+      .find((button) => button.textContent?.includes('Saruul Directory'))!
+      .click();
+    await vi.waitFor(() => expect(mocks.goto).toHaveBeenCalledWith('/chat/-/user/user-directory'));
+  });
+
+  it('does not repeat a directory person who already has a one-to-one DM', async () => {
+    mocks.listUsers.mockResolvedValue({
+      members: [{ ...teammate, deleted: false, roles: [], createdAt: null }],
+      totalCount: 1,
+      hasMore: false
+    });
+    const { container } = await renderOpenSwitcher();
+    setSearch(container, 'river');
+
+    await vi.waitFor(() => expect(mocks.listUsers).toHaveBeenCalledWith('river', 8, 0));
+    await vi.waitFor(() => expect(resultButtons(container)).toHaveLength(1));
+    expect(container.textContent?.split('River Teammate').length).toBe(2);
+  });
+
+  it('lists message matches after destinations without the ? prefix', async () => {
+    mocks.searchMessages.mockResolvedValue({
+      results: [
+        {
+          id: 'message-mixed',
+          roomId: 'room-general',
+          roomName: 'general',
+          roomKind: RoomKind.CHANNEL,
+          actorId: 'user-current',
+          actor: currentUser,
+          body: 'Notes about the general budget',
+          createdAt: '2026-07-30T12:00:00.000Z',
+          threadRootEventId: null,
+          attachmentCount: 0,
+          relevanceScore: 3
+        }
+      ],
+      nextCursor: null
+    });
+    const { container } = await renderOpenSwitcher();
+    setSearch(container, 'general');
+
+    await vi.waitFor(() =>
+      expect(container.textContent).toContain('Notes about the general budget')
+    );
+    expect(mocks.searchMessages).toHaveBeenCalledWith({
+      query: 'general',
+      order: MessageSearchOrder.RELEVANCE,
+      pageSize: 10
+    });
+    const buttons = resultButtons(container);
+    expect(buttons[0]?.textContent).toContain('general');
+    expect(buttons.at(-1)?.textContent).toContain('Notes about the general budget');
+    expect(container.textContent).toContain('Message');
   });
 
   it('selects the result under a moving pointer', async () => {

@@ -1,0 +1,10 @@
+**/node_modules
+**/.svelte-kit
+**/.turbo
+.git
+.context
+cli/bin
+cli/internal/http_server/.client
+apps/*/build
+apps/*/dist
+apps/frontend/e2e/fixtures/bin

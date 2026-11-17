@@ -5,7 +5,8 @@ import { accountNameToken } from '@chatto/client/timeline/accountName';
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
 import { onDestroy, tick, untrack } from 'svelte';
-import { SvelteSet } from 'svelte/reactivity';
+import { SvelteMap, SvelteSet } from 'svelte/reactivity';
+import { createMemberDirectoryAPI } from '@chatto/client/api/memberDirectory';
 import {
   createMessageSearchAPI,
   MessageSearchOrder,
@@ -56,6 +57,12 @@ export type QuickSwitcherItem = {
 
 const SEARCH_DEBOUNCE_MS = 200;
 const MESSAGE_SEARCH_SERVER_TIMEOUT_MS = 3_000;
+/** Server user-directory rows requested per server for an ordinary query (Setunari). */
+const DIRECTORY_USER_LIMIT = 8;
+/** Message results shown after destinations and people for an ordinary query (Setunari). */
+const MIXED_MESSAGE_LIMIT = 5;
+/** Ordinary queries shorter than this do not start a message search (Setunari). */
+const MIXED_MESSAGE_MIN_LENGTH = 2;
 
 class SearchChannel<T> {
   items = $state.raw<T[]>([]);
@@ -111,6 +118,13 @@ export class QuickSwitcherModel {
   #catalogLoading = $state(false);
   #messageSearch = new SearchChannel<QuickSwitcherItem>();
   #messageSearchServerKey = '';
+  /**
+   * Setunari: people from each server's user directory (`UserService.ListUsers`), so an
+   * ordinary query finds every member, not only users already known to the live client.
+   */
+  #directoryUsers = new SearchChannel<QuickSwitcherItem>();
+  /** Per server: users who already have a visible one-to-one or self DM row. */
+  #dmUserIds = new SvelteMap<string, Set<string>>();
 
   constructor(private readonly onNextUnread?: () => Promise<void> | undefined) {
     onDestroy(() => this.deactivate());
@@ -175,13 +189,34 @@ export class QuickSwitcherModel {
       });
     }
     // Known users supplement navigation; even an exact user match follows conversations.
-    return scored.sort(
+    scored.sort(
       (a, b) => Number(a.kind === 'user') - Number(b.kind === 'user') || b.score - a.score
     );
+    if (isChannelFilter) return scored;
+
+    // Setunari: add directory people the client does not know yet, then message matches,
+    // so one query searches channels, DMs, all people, and messages together.
+    const seenUsers = new SvelteSet(
+      scored.filter((item) => item.kind === 'user').map((item) => `${item.serverId}\0${item.id}`)
+    );
+    const directoryUsers = this.#directoryUsers.items.filter((item) => {
+      const key = `${item.serverId}\0${item.id}`;
+      if (seenUsers.has(key) || this.#dmUserIds.get(item.serverId)?.has(item.id)) return false;
+      seenUsers.add(key);
+      return true;
+    });
+    return [
+      ...scored,
+      ...directoryUsers,
+      ...this.#messageSearch.items.slice(0, MIXED_MESSAGE_LIMIT)
+    ];
   });
 
   get loading(): boolean {
-    return this.query.trim().startsWith('?') ? this.#messageSearch.loading : this.#catalogLoading;
+    const raw = this.query.trim();
+    if (raw.startsWith('?')) return this.#messageSearch.loading;
+    if (raw.startsWith('#') || !raw) return this.#catalogLoading;
+    return this.#catalogLoading || this.#directoryUsers.loading || this.#messageSearch.loading;
   }
 
   activate(): void {
@@ -190,12 +225,14 @@ export class QuickSwitcherModel {
     this.#allItems = [];
     this.#catalogLoading = false;
     this.#messageSearch.fence();
+    this.#directoryUsers.fence();
   }
 
   deactivate(): void {
     this.#allItems = [];
     this.#catalogLoading = false;
     this.#messageSearch.fence();
+    this.#directoryUsers.fence();
   }
 
   setQuery(raw: string): void {
@@ -203,6 +240,7 @@ export class QuickSwitcherModel {
     this.selectedIndex = 0;
 
     this.#scheduleMessageSearch(raw);
+    this.#scheduleDirectorySearch(raw);
   }
 
   moveSelection(delta: number): void {
@@ -237,13 +275,16 @@ export class QuickSwitcherModel {
         !store.permissions.canStartDMs
       )
         return;
-      const user = item.targetUserId
+      const known = item.targetUserId
         ? store.projection.users.get(item.targetUserId)?.user
         : undefined;
-      if (!user || user.deleted || user.deactivated) return;
+      if (known && (known.deleted || known.deactivated)) return;
+      // Setunari: directory rows can name users the live client has not loaded yet.
+      const userId = known?.id ?? item.participants?.[0]?.id;
+      if (!userId || item.participants?.[0]?.deleted) return;
       quickSwitcher.close();
       try {
-        await startDMWith(item.serverId, user.id);
+        await startDMWith(item.serverId, userId);
       } catch (error) {
         toastError(error, m('quick_switcher.start_dm_failed'));
       }
@@ -262,7 +303,10 @@ export class QuickSwitcherModel {
     if (!item) return null;
     const previous = index > 0 ? this.filtered[index - 1] : null;
     if (this.query.trim()) {
-      return item.kind === 'user' && previous?.kind !== 'user' ? this.kindLabels.user : null;
+      // Setunari: label the people and message sections of a mixed result list.
+      if (this.query.trim().startsWith('?')) return null;
+      const grouped = item.kind === 'user' || item.kind === 'message';
+      return grouped && previous?.kind !== item.kind ? this.kindLabels[item.kind] : null;
     }
     const recent = this.#isRecent(item);
     const previousRecent = previous ? this.#isRecent(previous) : false;
@@ -324,11 +368,61 @@ export class QuickSwitcherModel {
 
   #scheduleMessageSearch(raw: string): void {
     const trimmed = raw.trim();
-    const query = trimmed.startsWith('?') ? trimmed.slice(1).trim() : '';
+    // Setunari: ordinary queries also search messages; `?` still means messages only.
+    const query = trimmed.startsWith('?')
+      ? trimmed.slice(1).trim()
+      : trimmed.startsWith('#') || trimmed.length < MIXED_MESSAGE_MIN_LENGTH
+        ? ''
+        : trimmed;
     this.#messageSearch.schedule(
       quickSwitcher.visible && query ? query : null,
       (search, requestId) => void this.#loadMessageResults(search, requestId)
     );
+  }
+
+  #scheduleDirectorySearch(raw: string): void {
+    const trimmed = raw.trim();
+    const query = trimmed.startsWith('?') || trimmed.startsWith('#') ? '' : trimmed;
+    this.#directoryUsers.schedule(
+      quickSwitcher.visible && query ? query : null,
+      (search, requestId) => void this.#loadDirectoryUsers(search, requestId)
+    );
+  }
+
+  /** Setunari: ask every authenticated server's user directory for matching people. */
+  async #loadDirectoryUsers(search: string, requestId: number): Promise<void> {
+    const instances = [...serverRegistry.servers];
+    const multiInstance = instances.length > 1;
+    const searches = instances.map(async (instance): Promise<QuickSwitcherItem[]> => {
+      const store = serverRegistry.tryGetStore(instance.id);
+      if (!store?.isAuthenticated || !store.permissions.canStartDMs) return [];
+      const serverName = store.serverInfo.name || instance.name || getHostname(instance.url);
+      const serverLabel = multiInstance ? serverName : '';
+      const page = await serverConnectionManager
+        .getClient(instance.id)
+        .getAPI(createMemberDirectoryAPI)
+        .listUsers(search, DIRECTORY_USER_LIMIT, 0);
+      return page.members
+        .filter((user) => user.id && !user.deleted)
+        .map((user) => ({
+          kind: 'user' as const,
+          id: user.id,
+          targetUserId: user.id,
+          label: user.displayName || user.login,
+          detail: [user.login ? `@${user.login}` : '', serverLabel].filter(Boolean).join(' · '),
+          serverId: instance.id,
+          serverName,
+          participants: [user],
+          searchTerms: [user.displayName, user.login],
+          score: 0
+        }));
+    });
+    const results = await Promise.all(
+      searches.map((promise) => resolveWithin(promise, MESSAGE_SEARCH_SERVER_TIMEOUT_MS, []))
+    );
+    const items = results.flat().sort((a, b) => a.label.localeCompare(b.label));
+    this.#directoryUsers.replace(requestId, items);
+    this.#directoryUsers.finish(requestId);
   }
 
   #loadCatalog(): void {
@@ -347,6 +441,7 @@ export class QuickSwitcherModel {
       const currentUserId = store?.viewerId ?? undefined;
       const logo: ServerLogo = { name: serverName, logoUrl: store?.serverInfo.iconUrl ?? null };
       const directMessageUserIds = new SvelteSet<string>();
+      this.#dmUserIds.set(instance.id, directMessageUserIds);
 
       items.push({
         kind: 'server',
@@ -488,6 +583,8 @@ export class QuickSwitcherModel {
             a.id.localeCompare(b.id)
         );
       if (!this.#messageSearch.replace(requestId, accumulated)) return;
+      // Setunari: in a mixed result list, messages come last and must not move the selection.
+      if (!this.query.trim().startsWith('?')) return;
       const preservedIndex = selected
         ? accumulated.findIndex(
             (item) => item.serverId === selected.serverId && item.id === selected.id
