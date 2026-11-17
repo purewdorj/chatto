@@ -1,0 +1,271 @@
+# Setunari: build the production Setunari Chat Mac app (signed with Developer ID and notarized)
+# and publish it as a GitHub Release of this fork.
+#
+#   Actions > "setunari-desktop" > Run workflow, or:
+#   gh workflow run setunari-desktop.yml -R Setunari/chatto -f version=0.5.0-setunari.3
+#
+# The release tag is `desktop-v<version>`. It does not start with `v`, so the upstream
+# release workflow does not start. To put the DMG on https://chat.setunari-group.com/downloads/,
+# run the "Publish desktop app" workflow in Setunari/chat with the same tag.
+#
+# Secrets (environment `setunari-desktop-signing`):
+#   SETUNARI_MACOS_CERTIFICATE_BASE64    Developer ID Application certificate and key (.p12, base64)
+#   SETUNARI_MACOS_CERTIFICATE_PASSWORD  password of the .p12
+#   SETUNARI_MACOS_NOTARY_API_KEY_BASE64 App Store Connect API key (.p8, base64)
+#   SETUNARI_MACOS_NOTARY_API_KEY_ID     App Store Connect API key ID
+#   SETUNARI_MACOS_NOTARY_API_ISSUER_ID  App Store Connect issuer ID
+name: setunari-desktop
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Build version, for example 0.5.0-setunari.3'
+        required: true
+        type: string
+      release:
+        description: 'Publish a GitHub Release (desktop-v<version>). Off = workflow artifact only.'
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: setunari-desktop
+  cancel-in-progress: false
+
+jobs:
+  build-macos:
+    if: github.repository == 'Setunari/chatto'
+    name: build-macos (Setunari Chat)
+    environment: setunari-desktop-signing
+    runs-on: macos-15
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ inputs.version }}
+      TAG: desktop-v${{ inputs.version }}
+      APP: apps/desktop/dist/Setunari Chat.app
+      BUNDLE_ID: mn.setunari.chatto
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Check version and source
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-setunari\.[0-9]+$ ]]; then
+            echo "::error::version must look like 0.5.0-setunari.3 (got '${VERSION}')."
+            exit 1
+          fi
+          package_version="$(jq -r '.version' apps/desktop/package.json)"
+          if [[ "${VERSION%%-*}" != "$package_version" ]]; then
+            echo "::error::version ${VERSION} does not match apps/desktop/package.json (${package_version})."
+            exit 1
+          fi
+
+          # Sign only code that is on the production branch.
+          git fetch origin '+refs/heads/setunari/main:refs/remotes/origin/setunari/main'
+          if ! git merge-base --is-ancestor HEAD origin/setunari/main; then
+            echo "::error::Run this workflow from setunari/main or a commit on it."
+            exit 1
+          fi
+
+          if [[ "${{ inputs.release }}" == "true" ]] && gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::Release ${TAG} exists. Use a new version."
+            exit 1
+          fi
+
+          {
+            echo "### Setunari Chat for Mac"
+            echo
+            echo "- Version: \`${VERSION}\`"
+            echo "- Commit: \`$(git rev-parse HEAD)\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Setup environment
+        uses: ./.github/actions/setup
+        with:
+          turbo-remote-cache: 'false'
+          install-cli-deps: 'false'
+
+      - name: Check and test desktop shell
+        run: mise test-desktop
+
+      - name: Test macOS game-capture helper
+        run: mise test-desktop-macos-capture
+
+      - name: Configure macOS signing
+        shell: bash
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.SETUNARI_MACOS_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.SETUNARI_MACOS_CERTIFICATE_PASSWORD }}
+          NOTARY_API_KEY_BASE64: ${{ secrets.SETUNARI_MACOS_NOTARY_API_KEY_BASE64 }}
+          NOTARY_API_KEY_ID: ${{ secrets.SETUNARI_MACOS_NOTARY_API_KEY_ID }}
+          NOTARY_API_ISSUER_ID: ${{ secrets.SETUNARI_MACOS_NOTARY_API_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+
+          for variable in \
+            CERTIFICATE_BASE64 \
+            CERTIFICATE_PASSWORD \
+            NOTARY_API_KEY_BASE64 \
+            NOTARY_API_KEY_ID \
+            NOTARY_API_ISSUER_ID; do
+            if [[ -z "${!variable}" ]]; then
+              echo "::error::The SETUNARI_MACOS_${variable} secret is not set in the setunari-desktop-signing environment."
+              exit 1
+            fi
+          done
+
+          certificate_path="$RUNNER_TEMP/setunari-developer-id.p12"
+          api_key_path="$RUNNER_TEMP/AuthKey_${NOTARY_API_KEY_ID}.p8"
+          keychain_path="$RUNNER_TEMP/setunari-signing.keychain-db"
+          keychain_password="$(openssl rand -hex 24)"
+
+          {
+            echo "CHATTO_MACOS_NOTARY_API_KEY=${api_key_path}"
+            echo "CHATTO_MACOS_SIGNING_KEYCHAIN=${keychain_path}"
+            echo "CHATTO_MACOS_SIGNING_CERTIFICATE=${certificate_path}"
+          } >> "$GITHUB_ENV"
+
+          printf '%s' "$CERTIFICATE_BASE64" | base64 --decode > "$certificate_path"
+          printf '%s' "$NOTARY_API_KEY_BASE64" | base64 --decode > "$api_key_path"
+          chmod 600 "$certificate_path" "$api_key_path"
+
+          security create-keychain -p "$keychain_password" "$keychain_path"
+          security set-keychain-settings -lut 21600 "$keychain_path"
+          security unlock-keychain -p "$keychain_password" "$keychain_path"
+          security import "$certificate_path" \
+            -k "$keychain_path" \
+            -P "$CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign \
+            -T /usr/bin/security
+          security set-key-partition-list \
+            -S apple-tool:,apple: \
+            -s \
+            -k "$keychain_password" \
+            "$keychain_path"
+          security list-keychains -d user -s "$keychain_path"
+
+          signing_identity="$(
+            security find-identity -v -p codesigning "$keychain_path" |
+              awk '/Developer ID Application:/ { print $2; exit }'
+          )"
+          if [[ -z "$signing_identity" ]]; then
+            echo "::error::The certificate does not contain a Developer ID Application identity."
+            exit 1
+          fi
+
+          {
+            echo "CHATTO_MACOS_SIGN_IDENTITY=${signing_identity}"
+            echo "CHATTO_MACOS_NOTARY_API_KEY_ID=${NOTARY_API_KEY_ID}"
+            echo "CHATTO_MACOS_NOTARY_API_ISSUER_ID=${NOTARY_API_ISSUER_ID}"
+          } >> "$GITHUB_ENV"
+
+      - name: Build, sign, and notarize the app
+        shell: bash
+        env:
+          CHATTO_BUILD_VERSION: ${{ inputs.version }}
+          CHATTO_FRONTEND_PRECOMPRESS: '1'
+          CHATTO_DESKTOP_AUTO_UPDATE: 'false'
+        run: |
+          set -o pipefail
+          mise desktop-build 2>&1 | tee "$RUNNER_TEMP/setunari-notarization.log"
+
+      - name: Verify the app
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x "$APP/Contents/Helpers/Chatto Capture Helper.app/Contents/MacOS/chatto-macos-capture-probe"
+          test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$APP/Contents/Info.plist")" = "$BUNDLE_ID"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          # desktop-build staples and validates the app with bounded network retries.
+          spctl --assess --type execute --verbose=4 "$APP"
+
+      - name: Build, sign, and notarize the DMG
+        shell: bash
+        run: |
+          set -o pipefail
+          mise x -- pnpm --filter chatto-desktop build:macos-dmg --release 2>&1 | tee -a "$RUNNER_TEMP/setunari-notarization.log"
+
+      - name: Verify the DMG
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          images=(apps/desktop/dist/dmg/*.dmg)
+          if [[ ${#images[@]} -ne 1 ]]; then
+            echo "::error::Expected one DMG, found ${#images[@]}."
+            exit 1
+          fi
+          image="$PWD/${images[0]}"
+
+          hdiutil verify "$image"
+          xcrun stapler validate "$image"
+          spctl --assess --type open --context context:primary-signature --verbose=4 "$image"
+
+          scratch="$(mktemp -d "$RUNNER_TEMP/dmg-test.XXXXXX")"
+          hdiutil attach "$image" -readonly -nobrowse -mountpoint "$scratch/mounted"
+          trap 'hdiutil detach "$scratch/mounted" || true' EXIT
+          test "$(readlink "$scratch/mounted/Applications")" = /Applications
+          ditto "$scratch/mounted/Setunari Chat.app" "$scratch/Setunari Chat.app"
+          codesign --verify --deep --strict --verbose=2 "$scratch/Setunari Chat.app"
+          test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$scratch/Setunari Chat.app/Contents/Info.plist")" = "$BUNDLE_ID"
+
+          mkdir -p .context/setunari-desktop
+          cp "$image" ".context/setunari-desktop/setunari-chat-desktop_${VERSION}_macOS_ARM64.dmg"
+          # Stable name that the download link on chat.setunari-group.com uses.
+          cp "$image" .context/setunari-desktop/Setunari-Chat-mac.dmg
+          (cd .context/setunari-desktop && shasum -a 256 -- *.dmg > SHA256SUMS)
+          cat .context/setunari-desktop/SHA256SUMS
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: setunari-chat-mac-${{ inputs.version }}
+          path: .context/setunari-desktop
+          retention-days: 30
+
+      - name: Publish GitHub Release
+        if: inputs.release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" \
+            --target "$(git rev-parse HEAD)" \
+            --title "Setunari Chat for Mac ${VERSION}" \
+            --notes "Setunari Chat desktop app for Apple silicon Macs. Signed with Developer ID and notarized by Apple. Built from $(git rev-parse HEAD) by run ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}." \
+            .context/setunari-desktop/*
+          echo "- Release: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${TAG}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload notarization log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: setunari-notarization-log-${{ github.run_id }}
+          path: ${{ runner.temp }}/setunari-notarization.log
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Remove signing credentials
+        if: always()
+        shell: bash
+        run: |
+          if [[ -n "${CHATTO_MACOS_SIGNING_KEYCHAIN:-}" ]]; then
+            security delete-keychain "$CHATTO_MACOS_SIGNING_KEYCHAIN" || true
+          fi
+          rm -f \
+            "${CHATTO_MACOS_SIGNING_CERTIFICATE:-$RUNNER_TEMP/setunari-developer-id.p12}" \
+            "${CHATTO_MACOS_NOTARY_API_KEY:-}"
