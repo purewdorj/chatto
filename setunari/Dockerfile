@@ -25,7 +25,8 @@ ARG VERSION=0.0.0-setunari
 ARG TARGETARCH
 WORKDIR /src
 COPY --from=frontend /src /src
-RUN cp LICENSES/AGPL-3.0-or-later.txt cli/LICENSE \
+RUN mkdir -p cli/cmd/embedded \
+ && cp LICENSES/AGPL-3.0-or-later.txt cli/LICENSE \
  && cp NOTICE cli/NOTICE \
  && cp LICENSES/AGPL-3.0-or-later.txt cli/cmd/embedded/LICENSE \
  && cp NOTICE cli/cmd/embedded/NOTICE \
