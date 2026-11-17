@@ -37,10 +37,15 @@ Then bump `CHATTO_REF` / `CHATTO_VERSION` in `Setunari/chat` `deploy/versions.en
 ## Build the Mac app
 
 ```bash
-CHATTO_BUILD_VERSION=0.5.0-setunari.1 CHATTO_FRONTEND_PRECOMPRESS=1 mise desktop-build
-# -> apps/desktop/dist/Setunari Chat.app (ad-hoc signed; other Macs must allow it once in
-#    System Settings → Privacy & Security). Set CHATTO_MACOS_SIGN_IDENTITY for a real certificate.
+CHATTO_BUILD_VERSION=0.5.0-setunari.N CHATTO_FRONTEND_PRECOMPRESS=1 mise desktop-build
+mise x -- pnpm --filter chatto-desktop build:macos-dmg --release
 ```
+
+Release builds are signed with Developer ID and notarized when `CHATTO_MACOS_SIGN_IDENTITY` and the
+three `CHATTO_MACOS_NOTARY_API_*` variables are set (the build Mac keeps them in the gitignored
+`mise.local.toml`; `build:macos-dmg --release` needs them in the shell). Without them the app is
+ad-hoc signed and other Macs must allow it once in System Settings → Privacy & Security. Publishing
+steps: `Setunari/chat` → `deploy/RUNBOOK.md` → "Desktop app downloads".
 
 ## Build the server image locally
 
