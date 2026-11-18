@@ -264,6 +264,8 @@ class Chatto:
         except urllib.error.HTTPError as err:
             detail = err.read().decode(errors="replace")[:300]
             raise SyncError(f"Chatto {method}: HTTP {err.code}: {detail}") from None
+        except (urllib.error.URLError, OSError) as err:
+            raise SyncError(f"cannot reach Chatto at {self.base}: {err}") from None
 
     def users(self) -> list[ChattoUser]:
         svc = "chatto.admin.v1.AdminUserService"
@@ -411,7 +413,13 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         cfg = config_from_env(dict(os.environ))
-        return run(cfg, args.apply, args.force, read_ad(cfg), Chatto(cfg.chatto_url, cfg.chatto_token))
+        try:
+            accounts = read_ad(cfg)
+        except SyncError:
+            raise
+        except Exception as err:  # ldap3 and socket errors: one readable line
+            raise SyncError(f"cannot read AD at {cfg.ldap_url}: {type(err).__name__}: {err}") from None
+        return run(cfg, args.apply, args.force, accounts, Chatto(cfg.chatto_url, cfg.chatto_token))
     except SyncError as err:
         print(f"ad-sync: {err}", file=sys.stderr)
         return 2
