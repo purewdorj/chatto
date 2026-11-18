@@ -80,19 +80,23 @@ def config_from_env(env: dict[str, str]) -> Config:
             raise SyncError(f"{name} is not set")
         return value
 
+    def read_secret(name: str) -> str:
+        path = env.get(name, "").strip()
+        try:
+            with open(path, encoding="utf-8") as f:
+                return f.read().strip()
+        except OSError as err:
+            raise SyncError(f"{name}: cannot read {path}: {err.strerror}") from None
+
     password = env.get("AD_BIND_PASSWORD", "")
-    password_file = env.get("AD_BIND_PASSWORD_FILE", "").strip()
-    if password_file:
-        with open(password_file, encoding="utf-8") as f:
-            password = f.read().strip()
+    if env.get("AD_BIND_PASSWORD_FILE", "").strip():
+        password = read_secret("AD_BIND_PASSWORD_FILE")
     if not password:
         raise SyncError("AD_BIND_PASSWORD or AD_BIND_PASSWORD_FILE is not set")
 
     token = env.get("CHATTO_TOKEN", "")
-    token_file = env.get("CHATTO_TOKEN_FILE", "").strip()
-    if token_file:
-        with open(token_file, encoding="utf-8") as f:
-            token = f.read().strip()
+    if env.get("CHATTO_TOKEN_FILE", "").strip():
+        token = read_secret("CHATTO_TOKEN_FILE")
     if not token:
         raise SyncError("CHATTO_TOKEN or CHATTO_TOKEN_FILE is not set")
 
@@ -271,7 +275,8 @@ class Chatto:
             with self.opener(req, timeout=60) as resp:
                 return json.loads(resp.read() or b"{}")
         except urllib.error.HTTPError as err:
-            detail = err.read().decode(errors="replace")[:300]
+            with err:
+                detail = err.read().decode(errors="replace")[:300]
             raise SyncError(f"Chatto {method}: HTTP {err.code}: {detail}") from None
         except (urllib.error.URLError, OSError) as err:
             raise SyncError(f"cannot reach Chatto at {self.base}: {err}") from None
@@ -332,10 +337,15 @@ def plan(cfg: Config, ad: list[ADAccount], users: list[ChattoUser], ours: set[st
     for u in sorted(users, key=lambda x: x.login):
         if u.login in cfg.keep_logins:
             continue
-        matches = list(by_login.get(u.login, []))
-        if not matches:
-            for e in u.emails:
-                matches.extend(by_email.get(e, []))
+        # Verified emails first: users can change their own Chatto login, so a
+        # login can point at another person's AD account. A verified email
+        # proves inbox access. The login is only a fallback for accounts
+        # without a matching verified email.
+        email_matches = {a.dn: a for e in sorted(u.emails) for a in by_email.get(e, [])}
+        login_matches = {a.dn: a for a in by_login.get(u.login, [])}
+        if email_matches and login_matches and not email_matches.keys() & login_matches.keys():
+            notes.append(f"{u.login}: login matches a different AD account than the verified email; using the email")
+        matches = list(email_matches.values() or login_matches.values())
         if matches:
             current = [a for a in matches if a.current]
             if current:
@@ -375,6 +385,12 @@ def run(cfg: Config, apply: bool, force: bool, ad_accounts: list[ADAccount], cha
         raise SyncError("AD returned no current employees; check AD_BASE_DN and AD_EMPLOYEE_GROUP_DN. Nothing changed.")
     users = chatto.users()
     ours = load_state(cfg.state_file)
+    # An account in the state file that is active now was reactivated by an
+    # admin or by this script. Forget it, so that a later manual deactivation
+    # is not reverted.
+    active_ids = {u.id for u in users if not u.deactivated}
+    stale = ours & active_ids
+    ours -= stale
     actions, notes = plan(cfg, ad_accounts, users, ours)
 
     print(f"AD base: {cfg.base_dn}", file=out)
@@ -397,9 +413,13 @@ def run(cfg: Config, apply: bool, force: bool, ad_accounts: list[ADAccount], cha
         print("Dry run. Run with --apply to make these changes.", file=out)
         return 0
 
+    if stale:
+        save_state(cfg.state_file, ours)
     failures = 0
+    skipped = 0
     for a in actions:
         if not a.user.can_change:
+            skipped += 1
             continue
         try:
             chatto.set_deactivated(a.user.id, a.deactivate)
@@ -412,7 +432,7 @@ def run(cfg: Config, apply: bool, force: bool, ad_accounts: list[ADAccount], cha
         else:
             ours.discard(a.user.id)
         save_state(cfg.state_file, ours)
-    print(f"Applied {len(actions) - failures} change(s), {failures} failure(s).", file=out)
+    print(f"Applied {len(actions) - failures - skipped} change(s), {skipped} skipped, {failures} failure(s).", file=out)
     return 1 if failures else 0
 
 

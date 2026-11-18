@@ -19,9 +19,16 @@ A **current employee** is an AD user under `AD_BASE_DN` (empty: the whole domain
 - is not under one of `AD_EXCLUDE_OUS`,
 - is a member of `AD_EMPLOYEE_GROUP_DN`, also through nested groups (only when set).
 
-Each human Chatto account is matched to AD by login (`AD_LOGIN_ATTR`, default
-`sAMAccountName`, case-insensitive), then by verified email (`mail`,
-`userPrincipalName`).
+Each human Chatto account is matched to AD by verified email first (`AD_EMAIL_ATTRS`,
+default `mail,userPrincipalName`). If no verified email matches, the login is used
+(`AD_LOGIN_ATTR`, default `sAMAccountName`, case-insensitive). Users can change their
+Chatto login, so a login match is weaker than an email match. When the login and the
+email match different AD accounts, the email wins and the output shows a note.
+
+An account that is not under `AD_BASE_DN` is "no AD account", not "former employee".
+If people who leave are moved to an OU outside `AD_BASE_DN`, or their AD account is
+deleted, the script does not deactivate them (with the default `ADSYNC_UNMATCHED=ignore`).
+Keep `AD_BASE_DN` empty (the whole domain) and use `AD_EXCLUDE_OUS` for leaver OUs.
 
 | Chatto account                                     | Action                                           |
 | -------------------------------------------------- | ------------------------------------------------ |
@@ -33,7 +40,9 @@ Each human Chatto account is matched to AD by login (`AD_LOGIN_ATTR`, default
 | login in `ADSYNC_KEEP_LOGINS`, bots, server owners | none                                             |
 
 The state file (`ADSYNC_STATE_FILE`) lists the accounts the script deactivated.
-Keep it between runs.
+Keep it between runs. When an account in the list is active again (an admin or the
+script reactivated it), the script removes it from the list. A later manual
+deactivation then stays.
 
 Safety: the script changes nothing when AD returns no current employees (wrong base
 DN or group), or when more than `ADSYNC_MAX_DEACTIVATIONS` (default 25) accounts
@@ -49,7 +58,9 @@ would be deactivated. Check the plan and run with `--force` in that case.
    file in `CHATTO_TOKEN_FILE`. The bot's owner must have these permissions too
    (the `admin` role has them). A bot key does not need privileged mode.
 3. **Configuration.** Copy `ad-sync.env.example` to `ad-sync.env`, fill it in,
-   `chmod 600`.
+   `chmod 600`. The shell loads this file, so put a value that contains spaces in
+   double quotes, for example `AD_EMPLOYEE_GROUP_DN="CN=Chat Users,OU=Groups,DC=example,DC=local"`.
+   Without quotes, the shell cuts the value at the first space.
 4. **Install.** On the host that runs it (needs network access to a domain
    controller and to the Chatto URL):
 

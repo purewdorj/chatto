@@ -10,6 +10,7 @@ import sys
 import tempfile
 import threading
 import unittest
+import unittest.mock
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -220,6 +221,249 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(c.chatto_url, "https://chat")
         with self.assertRaises(ad_sync.SyncError):
             ad_sync.config_from_env({**env, "ADSYNC_UNMATCHED": "delete"})
+
+
+class MatchingTest(unittest.TestCase):
+    """Users can change their own Chatto login, so verified emails win."""
+
+    def test_renamed_login_does_not_hide_a_former_employee(self):
+        # The leaver renamed their Chatto login to a current employee's
+        # sAMAccountName. Their verified email still points to their own
+        # disabled AD account.
+        accounts = [ad("bat"), ad("dorj", False, ["dorj@corp.mn"])]
+        users = [user("u1", "bat", emails=["dorj@corp.mn"])]
+        actions, notes = ad_sync.plan(cfg(), accounts, users, ours=set())
+        self.assertEqual([(a.user.id, a.deactivate) for a in actions], [("u1", True)])
+        self.assertEqual(len(notes), 1)
+        self.assertIn("different AD account", notes[0])
+
+    def test_login_collision_does_not_deactivate_a_current_employee(self):
+        # The Chatto login equals a former employee's sAMAccountName, but the
+        # verified email belongs to a current employee.
+        accounts = [ad("old", False), ad("saraa", True, ["saraa@corp.mn"])]
+        users = [user("u1", "old", emails=["saraa@corp.mn"])]
+        actions, _ = ad_sync.plan(cfg(), accounts, users, ours=set())
+        self.assertEqual(actions, [])
+
+    def test_login_is_the_fallback_without_a_matching_email(self):
+        accounts = [ad("dorj", False, ["dorj@corp.mn"])]
+        users = [user("u1", "dorj", emails=["private@example.com"])]
+        actions, notes = ad_sync.plan(cfg(), accounts, users, ours=set())
+        self.assertEqual([(a.user.id, a.deactivate) for a in actions], [("u1", True)])
+        self.assertEqual(notes, [])
+
+    def test_login_and_email_of_the_same_account_give_no_note(self):
+        accounts = [ad("dorj", False, ["dorj@corp.mn"])]
+        users = [user("u1", "dorj", emails=["dorj@corp.mn"])]
+        _, notes = ad_sync.plan(cfg(), accounts, users, ours=set())
+        self.assertEqual(notes, [])
+
+    def test_any_current_email_match_keeps_the_account(self):
+        # Two verified emails: one for an old disabled account, one for the
+        # current account (for example after a rehire).
+        accounts = [ad("bat.old", False, ["bat.old@corp.mn"]), ad("bat", True, ["bat@corp.mn"])]
+        users = [user("u1", "bat", emails=["bat.old@corp.mn", "bat@corp.mn"])]
+        actions, _ = ad_sync.plan(cfg(), accounts, users, ours=set())
+        self.assertEqual(actions, [])
+
+    def test_keep_logins_is_case_insensitive_on_the_chatto_side(self):
+        c = cfg(keep_logins={"admin"})
+        # ChattoUser logins are lower case (Chatto.users() lowers them).
+        actions, _ = ad_sync.plan(c, [ad("admin", False)], [user("u1", "admin")], ours=set())
+        self.assertEqual(actions, [])
+
+
+class StateTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.state = os.path.join(self.tmp.name, "state.json")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_missing_state_file_is_empty(self):
+        self.assertEqual(ad_sync.load_state(self.state), set())
+
+    def test_save_and_load(self):
+        ad_sync.save_state(self.state, {"u2", "u1"})
+        self.assertEqual(ad_sync.load_state(self.state), {"u1", "u2"})
+        with open(self.state, encoding="utf-8") as f:
+            self.assertEqual(json.load(f), {"deactivated_by_sync": ["u1", "u2"]})
+        self.assertFalse(os.path.exists(self.state + ".tmp"))
+
+
+class _RecordingChatto:
+    """In-memory stand-in for ad_sync.Chatto."""
+
+    def __init__(self, users, fail_ids=()):
+        self._users = users
+        self.fail_ids = set(fail_ids)
+        self.calls = []
+
+    def users(self):
+        return [ad_sync.ChattoUser(u.id, u.login, set(u.emails), u.deactivated, u.can_change) for u in self._users]
+
+    def set_deactivated(self, user_id, deactivated):
+        self.calls.append((user_id, deactivated))
+        if user_id in self.fail_ids:
+            raise ad_sync.SyncError("HTTP 500")
+        for u in self._users:
+            if u.id == user_id:
+                u.deactivated = deactivated
+
+
+class RunTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.state = os.path.join(self.tmp.name, "state.json")
+        self.c = cfg(state_file=self.state)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_admin_reactivation_clears_state_and_manual_deactivation_stays(self):
+        u = user("u1", "dorj")
+        chatto = _RecordingChatto([u])
+        # 1. dorj leaves: the sync deactivates and records the account.
+        ad_sync.run(self.c, True, False, [ad("dorj", False), ad("x")], chatto, io.StringIO())
+        self.assertTrue(u.deactivated)
+        self.assertEqual(ad_sync.load_state(self.state), {"u1"})
+        # 2. An admin reactivates dorj by hand while AD still says "left".
+        #    The sync deactivates again (AD wins) and keeps the record.
+        u.deactivated = False
+        ad_sync.run(self.c, True, False, [ad("dorj", False), ad("x")], chatto, io.StringIO())
+        self.assertTrue(u.deactivated)
+        # 3. dorj comes back in AD, and the admin reactivates first.
+        u.deactivated = False
+        ad_sync.run(self.c, True, False, [ad("dorj"), ad("x")], chatto, io.StringIO())
+        self.assertEqual(ad_sync.load_state(self.state), set())
+        # 4. Later an admin deactivates dorj by hand. The sync must not undo it.
+        u.deactivated = True
+        chatto.calls.clear()
+        ad_sync.run(self.c, True, False, [ad("dorj"), ad("x")], chatto, io.StringIO())
+        self.assertTrue(u.deactivated)
+        self.assertEqual(chatto.calls, [])
+
+    def test_dry_run_writes_no_state(self):
+        ad_sync.save_state(self.state, {"u1"})
+        chatto = _RecordingChatto([user("u1", "dorj")])  # active again
+        ad_sync.run(self.c, False, False, [ad("dorj")], chatto, io.StringIO())
+        self.assertEqual(ad_sync.load_state(self.state), {"u1"})
+        self.assertEqual(chatto.calls, [])
+
+    def test_failures_are_counted_and_not_recorded(self):
+        chatto = _RecordingChatto([user("u1", "bat"), user("u2", "dorj")], fail_ids={"u1"})
+        out = io.StringIO()
+        with unittest.mock.patch("sys.stderr", io.StringIO()) as err:
+            code = ad_sync.run(self.c, True, False, [ad("bat", False), ad("dorj", False), ad("x")], chatto, out)
+        self.assertEqual(code, 1)
+        self.assertIn("1 failure(s)", out.getvalue())
+        self.assertIn("error bat", err.getvalue())
+        self.assertEqual(ad_sync.load_state(self.state), {"u2"})
+
+    def test_reactivation_is_planned_only_for_our_accounts(self):
+        ad_sync.save_state(self.state, {"u1"})
+        chatto = _RecordingChatto([user("u1", "bat", deactivated=True), user("u2", "dorj", deactivated=True)])
+        ad_sync.run(self.c, True, False, [ad("bat"), ad("dorj")], chatto, io.StringIO())
+        self.assertEqual(chatto.calls, [("u1", False)])
+        self.assertEqual(ad_sync.load_state(self.state), set())
+
+
+class ChattoClientTest(unittest.TestCase):
+    def setUp(self):
+        FakeChatto.calls = []
+        FakeChatto.members = {
+            "u1": member("u1", "Bat", verifiedEmails=["Bat@Corp.mn"]),
+            "u2": member("u2", "gone", deleted=True),
+            "u3": member("u3", "helper", bot={"ownerUserId": "u1"}),
+            "u4": member("u4", "c"),
+            "u5": member("u5", "d", deactivated=True),
+        }
+        self.srv = HTTPServer(("127.0.0.1", 0), FakeChatto)
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+        self.url = f"http://127.0.0.1:{self.srv.server_port}"
+
+    def tearDown(self):
+        self.srv.shutdown()
+        self.srv.server_close()
+
+    def test_users_pages_and_skips_bots_and_deleted(self):
+        users = ad_sync.Chatto(self.url, "t").users()
+        self.assertEqual([u.id for u in users], ["u1", "u4", "u5"])
+        self.assertEqual(users[0].login, "bat")
+        self.assertEqual(users[0].emails, {"bat@corp.mn"})
+        self.assertTrue(users[2].deactivated)
+        # The fake returns 2 IDs per page: 3 ListMembers calls with offsets 0, 2, 4.
+        offsets = [b["page"]["offset"] for p, _, b in FakeChatto.calls if p.endswith("ListMembers")]
+        self.assertEqual(offsets, [0, 2, 4])
+
+    def test_http_error_becomes_sync_error(self):
+        with self.assertRaises(ad_sync.SyncError) as ctx:
+            ad_sync.Chatto(self.url, "t").call("chatto.admin.v1.AdminUserService", "Unknown", {})
+        self.assertIn("HTTP 404", str(ctx.exception))
+
+    def test_unreachable_server_becomes_sync_error(self):
+        self.srv.shutdown()
+        self.srv.server_close()
+        with self.assertRaises(ad_sync.SyncError) as ctx:
+            ad_sync.Chatto(self.url, "t").users()
+        self.assertIn("cannot reach Chatto", str(ctx.exception))
+        # tearDown shuts down a running server.
+        self.srv = HTTPServer(("127.0.0.1", 0), FakeChatto)
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+
+
+class HelperTest(unittest.TestCase):
+    def test_escape(self):
+        self.assertEqual(ad_sync._escape("CN=A (B)*\\x"), "CN=A \\28B\\29\\2a\\5cx")
+
+    def test_upn_login_drops_the_domain(self):
+        c = cfg(login_attr="userPrincipalName")
+        a = ad_sync.classify("cn=bat", {"userPrincipalName": ["Bat@corp.local"], "userAccountControl": [512]}, c, None, NOW)
+        self.assertEqual(a.login, "bat")
+        self.assertIn("bat@corp.local", a.emails)
+
+    def test_account_expires_decoded_by_ldap3(self):
+        # ldap3 can return accountExpires as datetime values.
+        never = dt.datetime(9999, 12, 31, 23, 59, 59, tzinfo=dt.timezone.utc)
+        self.assertEqual(ad_sync._as_int(never), 0)
+        self.assertEqual(ad_sync._as_int(ad_sync.FILETIME_EPOCH), 0)
+        c = cfg()
+        past = NOW - dt.timedelta(days=1)
+        a = ad_sync.classify("cn=x", {"sAMAccountName": ["x"], "accountExpires": [past]}, c, None, NOW)
+        self.assertEqual(a.reason, "expired in AD")
+
+    def test_attribute_names_are_case_insensitive(self):
+        a = ad_sync.classify("cn=x", {"SAMACCOUNTNAME": ["X"], "useraccountcontrol": [514]}, cfg(), None, NOW)
+        self.assertEqual((a.login, a.reason), ("x", "disabled in AD"))
+
+
+class SecretFileTest(unittest.TestCase):
+    def test_password_and_token_files(self):
+        with tempfile.TemporaryDirectory() as d:
+            pw, tok = os.path.join(d, "pw"), os.path.join(d, "tok")
+            with open(pw, "w") as f:
+                f.write("secret\n")
+            with open(tok, "w") as f:
+                f.write("cht_BK_abc\n")
+            c = ad_sync.config_from_env({"AD_LDAP_URL": "ldaps://dc1", "AD_BIND_DN": "cn=svc",
+                                         "AD_BIND_PASSWORD_FILE": pw, "CHATTO_URL": "https://chat",
+                                         "CHATTO_TOKEN_FILE": tok})
+            self.assertEqual((c.bind_password, c.chatto_token), ("secret", "cht_BK_abc"))
+            self.assertEqual(c.base_dn, "")
+
+    def test_missing_secret_file_is_a_sync_error(self):
+        env = {"AD_LDAP_URL": "ldaps://dc1", "AD_BIND_DN": "cn=svc", "CHATTO_URL": "https://chat",
+               "CHATTO_TOKEN": "t", "AD_BIND_PASSWORD_FILE": "/nonexistent/ad-password"}
+        with self.assertRaises(ad_sync.SyncError) as ctx:
+            ad_sync.config_from_env(env)
+        self.assertIn("AD_BIND_PASSWORD_FILE", str(ctx.exception))
+
+    def test_main_reports_config_errors_with_exit_code_2(self):
+        with unittest.mock.patch.dict(os.environ, {}, clear=True), \
+             unittest.mock.patch("sys.stderr", io.StringIO()) as err:
+            self.assertEqual(ad_sync.main([]), 2)
+        self.assertIn("ad-sync:", err.getvalue())
 
 
 if __name__ == "__main__":
