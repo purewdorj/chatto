@@ -23,14 +23,14 @@ Each human Chatto account is matched to AD by login (`AD_LOGIN_ATTR`, default
 `sAMAccountName`, case-insensitive), then by verified email (`mail`,
 `userPrincipalName`).
 
-| Chatto account | Action |
-|---|---|
-| AD account is a current employee | none |
-| AD account is not a current employee | **deactivate** |
-| deactivated by this script, current employee again | **reactivate** |
-| deactivated by an admin | none (never reactivated by the script) |
-| no AD account (local admin, test account) | none; `ADSYNC_UNMATCHED=deactivate` changes this |
-| login in `ADSYNC_KEEP_LOGINS`, bots, server owners | none |
+| Chatto account                                     | Action                                           |
+| -------------------------------------------------- | ------------------------------------------------ |
+| AD account is a current employee                   | none                                             |
+| AD account is not a current employee               | **deactivate**                                   |
+| deactivated by this script, current employee again | **reactivate**                                   |
+| deactivated by an admin                            | none (never reactivated by the script)           |
+| no AD account (local admin, test account)          | none; `ADSYNC_UNMATCHED=deactivate` changes this |
+| login in `ADSYNC_KEEP_LOGINS`, bots, server owners | none                                             |
 
 The state file (`ADSYNC_STATE_FILE`) lists the accounts the script deactivated.
 Keep it between runs.
