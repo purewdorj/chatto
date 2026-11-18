@@ -104,7 +104,7 @@ def config_from_env(env: dict[str, str]) -> Config:
         ldap_url=need("AD_LDAP_URL"),
         bind_dn=need("AD_BIND_DN"),
         bind_password=password,
-        base_dn=need("AD_BASE_DN"),
+        base_dn=env.get("AD_BASE_DN", "").strip(),
         employee_group_dn=env.get("AD_EMPLOYEE_GROUP_DN", "").strip(),
         exclude_ous=_split(env.get("AD_EXCLUDE_OUS", "")),
         login_attr=env.get("AD_LOGIN_ATTR", "sAMAccountName").strip() or "sAMAccountName",
@@ -193,11 +193,18 @@ def read_ad(cfg: Config, connection=None, now: dt.datetime | None = None) -> lis
             import ssl
 
             tls = ldap3.Tls(validate=ssl.CERT_REQUIRED, ca_certs_file=cfg.ldap_ca_file)
-        server = ldap3.Server(cfg.ldap_url, tls=tls, get_info=ldap3.NONE, connect_timeout=15)
+        server = ldap3.Server(cfg.ldap_url, tls=tls, get_info=ldap3.DSA, connect_timeout=15)
+        # No referrals: a wrong base DN must fail here, not follow the DC to another host.
         conn = ldap3.Connection(
             server, user=cfg.bind_dn, password=cfg.bind_password, auto_bind=True,
-            raise_exceptions=True, receive_timeout=60,
+            raise_exceptions=True, receive_timeout=60, auto_referrals=False,
         )
+    if not cfg.base_dn:
+        info = getattr(conn.server, "info", None)
+        naming = (info.other.get("defaultNamingContext") if info and info.other else None) or []
+        if not naming:
+            raise SyncError("AD_BASE_DN is not set and the server does not report defaultNamingContext")
+        cfg.base_dn = naming[0]
 
     attributes = sorted({cfg.login_attr, "userAccountControl", "accountExpires", *cfg.email_attrs})
 
@@ -208,6 +215,8 @@ def read_ad(cfg: Config, connection=None, now: dt.datetime | None = None) -> lis
         ):
             if entry.get("type") == "searchResEntry":
                 out.append((entry["dn"], entry.get("attributes", {})))
+            elif entry.get("type") == "searchResRef":
+                continue  # other partitions; not needed for one domain
         return out
 
     group_members = None
@@ -368,6 +377,7 @@ def run(cfg: Config, apply: bool, force: bool, ad_accounts: list[ADAccount], cha
     ours = load_state(cfg.state_file)
     actions, notes = plan(cfg, ad_accounts, users, ours)
 
+    print(f"AD base: {cfg.base_dn}", file=out)
     print(f"AD: {len(ad_accounts)} accounts, {current} current employees. Chatto: {len(users)} human accounts.", file=out)
     for n in notes:
         print(f"  note  {n}", file=out)
@@ -418,7 +428,10 @@ def main(argv: list[str] | None = None) -> int:
         except SyncError:
             raise
         except Exception as err:  # ldap3 and socket errors: one readable line
-            raise SyncError(f"cannot read AD at {cfg.ldap_url}: {type(err).__name__}: {err}") from None
+            hint = ""
+            if "referral" in type(err).__name__.lower() or "referral" in str(err).lower():
+                hint = " (AD_BASE_DN is not in this domain; leave it empty to use the domain root)"
+            raise SyncError(f"cannot read AD at {cfg.ldap_url}: {type(err).__name__}: {err}{hint}") from None
         return run(cfg, args.apply, args.force, accounts, Chatto(cfg.chatto_url, cfg.chatto_token))
     except SyncError as err:
         print(f"ad-sync: {err}", file=sys.stderr)

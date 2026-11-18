@@ -12,7 +12,7 @@ and stay in the people directory until their account is deactivated.
 
 ## Rules
 
-A **current employee** is an AD user under `AD_BASE_DN` that
+A **current employee** is an AD user under `AD_BASE_DN` (empty: the whole domain) that
 
 - is enabled (`userAccountControl` without `ACCOUNTDISABLE`),
 - has not expired (`accountExpires`),
